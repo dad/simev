@@ -5,6 +5,7 @@ import wrightfisher as wf
 class Organism(wf.Evolvable):
 	def __init__(self):
 		self.trait = 1.0
+		self.key = randomSequence(12,string.letters)
 	def fitness(self):
 		return self.trait
 	def spawn(self, mutation_rate):
@@ -28,7 +29,8 @@ def randomSequence(n, alphabet):
 class test001(unittest.TestCase):
 	"""basic run"""
 	def test_run(self):
-		p = wf.Population(0.01)
+		alphabet='ATGC'
+		p = wf.Population(wf.SimpleMutator(0.01,alphabet))
 		for n in range(10):
 			p.addMember(Organism())
 		p.evolve(1000)
@@ -54,19 +56,19 @@ class test002(unittest.TestCase):
 class test003(unittest.TestCase):
 	"""Sequence"""
 	def test_run(self):
-		p = wf.Population(0.01)
 		alphabet = 'ATGC'
+		p = wf.Population(wf.SimpleMutator(0.01,alphabet))
 		for n in range(10):
-			p.addMember(wf.EvolvableSequence(randomSequence(20,alphabet),alphabet))
+			p.addMember(wf.EvolvableSequence(randomSequence(20,alphabet)))
 		p.evolve(1000)
 		#for m in p.members:
 		#	print m
 
 class test004(unittest.TestCase):
 	def test_run(self):
-		e = wf.EvolvableSequence(randomSequence(100,'ATGC'),'ATGC')
-		off = e.spawn(0.0).offspring
-		assert e.eq(off)
+		e = wf.EvolvableSequence(randomSequence(100,'ATGC'))
+		off = e.spawn(wf.SimpleMutator(0.0)).offspring
+		assert e == off
 
 if __name__=="__main__":
 	unittest.main(verbosity=2)
