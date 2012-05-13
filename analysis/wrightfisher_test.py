@@ -52,7 +52,7 @@ class test002(unittest.TestCase):
 		# Now know that
 		for x in range(n):
 			#print x, wf.pickIndexByProbability(cum_probs, x/float(n))
-			assert wf.pickIndexByProbability(cum_probs, x/float(n)) == x
+			self.assertTrue(wf.pickIndexByProbability(cum_probs, x/float(n)) == x)
 
 class test003(unittest.TestCase):
 	"""Sequence"""
@@ -70,7 +70,7 @@ class test004(unittest.TestCase):
 		# Zero mutation rate copy
 		off = e.spawn(wf.SimpleMutator(0.0)).offspring
 		# Should yield identical sequences
-		assert e == off
+		self.assertTrue(e == off)
 
 class test005(unittest.TestCase):
 	"""Tracking frequency"""
@@ -85,7 +85,7 @@ class test005(unittest.TestCase):
 		for m in pop.members:
 			counts.append((pop.count(m),m))
 		counts.sort(reverse=True)
-		assert dom_seq_entry == counts[0][1]
+		self.assertTrue(dom_seq_entry == counts[0][1])
 
 class test006(unittest.TestCase):
 	"""Histogram"""
@@ -96,20 +96,25 @@ class test006(unittest.TestCase):
 		seq = wf.EvolvableSequence(randomSequence(90,'ATGC'))
 		pop.populate(seq)
 		h = pop.histogram()
-		assert h[0] == n
+		self.assertTrue(h[0] == n)
 		for i in range(10):
 			pop.evolve(1)
 			h = pop.histogram()
-			assert sum(h) == n
+			self.assertTrue(sum(h) == n)
 
 class test007(unittest.TestCase):
-	"""Members iterator"""
+	"""Mutation info"""
 	def test_run(self):
 		alphabet = 'ATGC'
-		n = 1000
-		pop = wf.Population(n,wf.SimpleMutator(0.0001,alphabet))
-		seq = wf.EvolvableSequence(randomSequence(90,'ATGC'))
-		pop.populate(seq)
+		mut = wf.SimpleMutator(0.1,alphabet)
+		seq = wf.EvolvableSequence(randomSequence(50,'ATGC'))
+		mutres = seq.spawn(mut)
+		newseq = [x for x in mutres.offspring.sequence]
+		for m in mutres.mutations:
+			self.assertTrue(seq[m.location]==m.from_base)
+			self.assertTrue(newseq[m.location]==m.to_base)
+			newseq[m.location] = m.from_base
+		self.assertTrue(''.join(newseq) == seq.sequence)
 		
 
 if __name__=="__main__":

@@ -6,6 +6,7 @@ class NotImplementedException(Exception):
 		myvar = 1
 
 class SpawnResult:
+	"""Record storing results of replication with mutation."""
 	def __init__(self):
 		self.offspring = None
 		self.mutations = []
@@ -19,32 +20,36 @@ class SpawnResult:
 		return len(self.mutations)
 
 class Evolvable:
-	def __init__(self):
-		pass
-	
+	"""An interface for a class that can reproduce with mutation and has a fitness function.""" 
 	def fitness(self):
+		"""Provides a measure of reproductive fitness."""
 		raise NotImplementedException, "Must override"
 	
-	def spawn(self, mutation_rate):
+	def spawn(self, mutator):
+		"""Replication with mutation."""
 		raise NotImplementedException, "Must override"
 
 class MutationInfo:
+	"""Record storing information about mutations."""
 	def __init__(self, location, from_base, to_base):
 		self.location = location
 		self.from_base = from_base
 		self.to_base = to_base
 
 class Mutator:
+	"""Interface for a class that can mutate a sequence."""
 	def mutate(self, sequence):
 		raise NotImplementedException, "Must override"
 
 class SimpleMutator(Mutator):
+	"""Unbiased nucleotide mutations."""
 	def __init__(self, per_site_mutation_rate, alphabet = 'ATGC'):
 		self.per_site_mutation_rate = per_site_mutation_rate
 		self.alphabet = alphabet
 		self.mut_choices = dict([(x,alphabet.replace(x,'')) for x in alphabet])
 
 	def mutate(self, sequence):
+		"""Mutate the sequence with the specified per-site mutation rate."""
 		mut_sequence = [x for x in sequence]
 		mutations = []
 		for l in range(len(mut_sequence)):
@@ -55,6 +60,7 @@ class SimpleMutator(Mutator):
 		return ''.join(mut_sequence), mutations
 
 class EvolvableSequence(Evolvable):
+	"""Base implementation of a sequence class that can evolve."""
 	def __init__(self, sequence):
 		self.sequence = sequence
 
@@ -82,6 +88,9 @@ class EvolvableSequence(Evolvable):
 
 	def __eq__(self,x):
 		return self.sequence == x.sequence
+	
+	def __getitem__(self,i):
+		return self.sequence[i]
 	
 def pickIndexByProbability(cum_probs, p):
 	assert p>=0.0 and p<=1.0
