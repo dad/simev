@@ -1,0 +1,18 @@
+import sys, os, math, string, random, unittest
+import wrightfisher as wf
+
+class Organism(wf.Evolvable):
+	def __init__():
+		trait = 1.0
+	def fitness():
+		return trait
+	def spawn():
+		return trait + random.random()
+
+class test001(unittest.TestCase):
+	"""infer header types"""
+	def test_run(self):
+		p = wf.Population(1000, Organism)
+		p.evolve(1000)
+		for o in p.members:
+			o.
