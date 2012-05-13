@@ -1,0 +1,8 @@
+5/13/2012
+=========
+In a day, have written what seems to be a partially working simulation. That is gratifying.
+
+What I want:
+1) Run replicates of the model I care about: expression-dependent selection.
+2) Track classic results (preparing for class): time to fixation, establishment phase, 
+
