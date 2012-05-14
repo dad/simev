@@ -4,6 +4,9 @@ import stats
 class NotImplementedException(Exception):
 	def __init__(self):
 		myvar = 1
+		
+def probabilityOfFixation(Ne, s):
+	return (1 - math.exp(2*s))/(1 - math.exp(2*Ne*s))
 
 class SpawnResult:
 	"""Record storing results of replication with mutation."""
@@ -62,18 +65,28 @@ class SimpleMutator(Mutator):
 class EvolvableSequence(Evolvable):
 	"""Base implementation of a sequence class that can evolve."""
 	def __init__(self, sequence):
-		self.sequence = sequence
+		self._sequence = sequence
+		self._fitness = 1.0
 
 	def copy(self):
 		e = EvolvableSequence(self.sequence)
 		return e
 
+	@property
 	def fitness(self):
-		return 1.0
+		return self._fitness
+	
+	@fitness.setter
+	def fitness(self,f):
+		self._fitness = f
+	
+	@property
+	def sequence(self):
+		return self._sequence
 
 	def spawn(self, mutator):
 		res = SpawnResult()
-		(mut_sequence, mutations) = mutator.mutate(self.sequence)
+		(mut_sequence, mutations) = mutator.mutate(self._sequence)
 		offs = EvolvableSequence(mut_sequence)
 		res.offspring = offs
 		res.mutations = mutations
@@ -81,16 +94,16 @@ class EvolvableSequence(Evolvable):
 
 	@property
 	def key(self):
-		return self.sequence
+		return self._sequence
 
 	def __str__(self):
-		return self.sequence
+		return self._sequence
 
 	def __eq__(self,x):
-		return self.sequence == x.sequence
+		return self._sequence == x._sequence
 	
 	def __getitem__(self,i):
-		return self.sequence[i]
+		return self._sequence[i]
 	
 def pickIndexByProbability(cum_probs, p):
 	assert p>=0.0 and p<=1.0
@@ -107,29 +120,38 @@ class GeneBankEntry:
 		self.parent = parent
 		self.fitness = fitness
 		self.birthtime = birthtime
-		self.refcount = 0
+		self._refcount = 0
 		self.coalescent = False
 		self._id = None
 
 	def addReference(self):
-		self.refcount += 1
-		return self.refcount
+		self._refcount += 1
+		return self._refcount
 
 	def removeReference(self):
-		self.refcount -= 1
-		return self.refcount
-
-	def setCoalescent(self, bool):
-		self.coalescent = bool
+		self._refcount -= 1
+		return self._refcount
+	
+	@property
+	def count(self):
+		return self._refcount
 
 	@property
-	def id(self, the_id):
-		self._id = the_id
+	def coalescent(self):
+		return self.coalescent
+	
+	@coalescent.setter
+	def coalescent(self, bool):
+		self.coalescent = bool
 	
 	@property
 	def id(self):
 		return self._id
 
+	@id.setter
+	def id(self, the_id):
+		self._id = the_id
+	
 	def __str__(self):
 		return "{} ({})".format(self.organism, self.refcount)
 
@@ -165,8 +187,23 @@ class GeneBank:
 			if entry.removeReference()==0:
 				# Refcount is zero: time to remove the organism from our world.
 				del self.table[entry.id]
-				if not entry.parent is None:
-					self.removeEntry(entry.parent)
+				self.removeEntry(entry.parent)
+	
+	def isCoalescent(self, entry):
+		res = entry.coalescent
+		if not entry.coalescent:
+			parent = entry.parent
+			if not parent is None and self.isCoalescent(parent):
+				if parent.count == 1:
+					entry.coalescent = True
+					res = True
+		return res
+
+class FixationResults:
+	def __init__(self):
+		self.fixed = None
+		self.time_to_fixation = None
+	
 
 class Population:
 	def __init__(self, population_size, mutator):
@@ -184,10 +221,13 @@ class Population:
 
 	def addMember(self, entry):
 		# Add to the population
-		self._members.append(entry)
+		if len(self._members) <= self.population_size:
+			self._members.append(entry)
+		else:
+			self.inject(entry)
 
 	def createOffspring(self, organism_entry, mutate=True):
-		"""Creates but does not add offspring."""
+		"""Creates offspring entry. Does not add to population."""
 		# Begin assuming no mutation will occur
 		new_entry = organism_entry
 		if mutate:
@@ -195,7 +235,7 @@ class Population:
 			spawnres = organism_entry.organism.spawn(self.mutator)
 			if spawnres.mutated:
 				# Create an entry for the GeneBank
-				new_entry = self.genebank.createEntry(spawnres.offspring, organism_entry, spawnres.offspring.fitness(), self.generation_count)
+				new_entry = self.genebank.createEntry(spawnres.offspring, organism_entry, spawnres.offspring.fitness, self.generation_count)
 		# Add to the GeneBank
 		self.genebank.addEntry(new_entry)
 		return new_entry
@@ -204,8 +244,8 @@ class Population:
 		"""Add population_size copies of the specified organism"""
 		# Make a parent for the whole population
 		parent = organism
-		parent_entry = self.genebank.createEntry(parent, None, parent.fitness(), self.generation_count)
-		parent_entry.setCoalescent(True)
+		parent_entry = self.genebank.createEntry(parent, None, parent.fitness, self.generation_count)
+		parent_entry.coalescent = True
 		# All new population
 		for i in range(self.population_size):
 			self.addMember(self.createOffspring(parent_entry, mutate=False))
@@ -214,9 +254,11 @@ class Population:
 
 	def makeCumulativeProbabilities(self):
 		total_fitness = 0.0
+		# Cache fitness and compute total fitness
 		for m in self._members:
-			m.cache_fitness = m.organism.fitness()
+			m.cache_fitness = m.organism.fitness
 			total_fitness += m.cache_fitness
+		# Create cumulative probabilities
 		self._members.sort(key = lambda x: x.cache_fitness, reverse=True)
 		cum_probs = []
 		cum_prob = 0.0
@@ -240,17 +282,53 @@ class Population:
 				spawn_entry = self.createOffspring(parent_entry)
 				# Insert offspring into new gen
 				self._members_buffer.append(spawn_entry)
-				# Track
-				#self.genebank.add(spawn_result, self.generations)
+			# Remove the previous generation
+			for m in self._members:
+				self.genebank.removeEntry(m)
 			# Replace population with the buffer
 			self._members = self._members_buffer
+	
+	def evolveUntilFixationOrLossOf(self, entry):
+		"""Evolve until organism specified in entry is lost or fixed.
+		Fixation is defined as when the entry becomes coalescent.
+		"""
+		start_generations = self.generations
+		while entry.count > 0 and not self.genebank.isCoalescent(entry):
+			#print entry.count, self.genebank.isCoalescent(entry), self.histogram()
+			self.evolve(1)
+		# Observe the results
+		res = FixationResults()
+		if entry.count == 0:
+			res.fixed = False
+			res.time_to_fixation = None
+		else:
+			res.fixed = True
+			res.time_to_fixation = self.generations - start_generations
+		return res
 
 	def erase(self):
 		"""Get rid of all information in the population."""
 		self._members = []
 		self.genebank.erase()
+	
+	def inject(self, organism):
+		"""Put the supplied organism into a randomly chosen spot in the population as a spontaneous mutant."""
+		new_entry = self.genebank.createEntry(organism, None, organism.fitness, self.generation_count)
+		slot = random.choice(range(len(self._members)))
+		slot_entry = self._members[slot]
+		# Add injected organism as if it were a spontaneous mutant
+		new_entry.parent = slot_entry.parent
+		self.genebank.addEntry(new_entry.parent)
+		self._members[slot] = new_entry
+		self.genebank.addEntry(new_entry)
+		print self.genebank.isCoalescent(new_entry)
+		# Kill existing organism
+		self.genebank.removeEntry(slot_entry)
+		return new_entry
 
+	###########
 	## Analytical methods
+	#############
 	def frequency(self, entry):
 		"""Get the frequency of a particular organism."""
 		return self.table[item.key()]

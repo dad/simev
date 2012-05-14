@@ -7,6 +7,7 @@ class TraitOrganism(wf.Evolvable):
 		self.trait = 1.0
 		self.key = randomSequence(12,string.letters)
 
+	@property
 	def fitness(self):
 		return self.trait
 	
@@ -115,6 +116,57 @@ class test007(unittest.TestCase):
 			self.assertTrue(newseq[m.location]==m.to_base)
 			newseq[m.location] = m.from_base
 		self.assertTrue(''.join(newseq) == seq.sequence)
+		
+class test008(unittest.TestCase):
+	"""Assured fixation"""
+	def test_run(self):
+		alphabet = 'ATGC'
+		dx = 0.1
+		Ne = 20
+		mu = 0.0001
+		predicted_fixation_probability = wf.probabilityOfFixation(Ne, dx)
+		n_fixations = 0
+		n_total = 0
+		for i in range(5*int(1/dx)):
+			pop = wf.Population(Ne,wf.SimpleMutator(0.0000001,alphabet))
+			seq = wf.EvolvableSequence(randomSequence(100,'ATGC'))
+			# No fitness
+			seq.fitness = 0.0
+			pop.populate(seq)
+			mutseq = wf.EvolvableSequence(randomSequence(100,'ATGC'))
+			mutseq.fitness = 1.0
+			mutentry = pop.inject(mutseq)
+			print ''
+			for m in pop.members:
+				print m.fitness
+			res = pop.evolveUntilFixationOrLossOf(mutentry)
+			# Everyone else has zero fitness -- fixation is assured.
+			self.assertTrue(res.fixed)
+		
+class test009(unittest.TestCase):
+	"""Predicting probability of fixation"""
+	def test_run(self):
+		alphabet = 'ATGC'
+		dx = 0.1
+		Ne = 1000
+		mu = 0.0001
+		predicted_fixation_probability = wf.probabilityOfFixation(Ne, dx)
+		n_fixations = 0
+		n_total = 0
+		for i in range(5*int(1/dx)):
+			pop = wf.Population(Ne,wf.SimpleMutator(0.0000001,alphabet))
+			seq = wf.EvolvableSequence(randomSequence(100,'ATGC'))
+			seq.fitness = 1.0
+			pop.populate(seq)
+			mutseq = wf.EvolvableSequence(randomSequence(100,'ATGC'))
+			mutseq.fitness = seq.fitness + dx
+			mutentry = pop.inject(mutseq)
+			res = pop.evolveUntilFixationOrLossOf(mutentry)
+			n_total += 1
+			if res.fixed:
+				n_fixations += 1
+		print n_fixations, n_total, n_fixations/float(n_total), predicted_fixation_probability
+			
 		
 
 if __name__=="__main__":
