@@ -1,3 +1,8 @@
+5/14/2012
+=========
+Fix coalescence.
+Make population not depend on a vector of size Ne. Let reference counts work!
+
 5/13/2012
 =========
 In a day, have written what seems to be a partially working simulation. That is gratifying.

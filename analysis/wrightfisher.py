@@ -313,9 +313,9 @@ class Population:
 	
 	def inject(self, organism):
 		"""Put the supplied organism into a randomly chosen spot in the population as a spontaneous mutant."""
-		new_entry = self.genebank.createEntry(organism, None, organism.fitness, self.generation_count)
 		slot = random.choice(range(len(self._members)))
 		slot_entry = self._members[slot]
+		new_entry = self.genebank.createEntry(organism, slot_, organism.fitness, self.generation_count)
 		# Add injected organism as if it were a spontaneous mutant
 		new_entry.parent = slot_entry.parent
 		self.genebank.addEntry(new_entry.parent)

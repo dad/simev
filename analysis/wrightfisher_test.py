@@ -154,11 +154,11 @@ class test009(unittest.TestCase):
 		n_fixations = 0
 		n_total = 0
 		for i in range(5*int(1/dx)):
-			pop = wf.Population(Ne,wf.SimpleMutator(0.0000001,alphabet))
-			seq = wf.EvolvableSequence(randomSequence(100,'ATGC'))
+			pop = wf.Population(Ne,wf.SimpleMutator(mu,alphabet))
+			seq = wf.EvolvableSequence(randomSequence(100,alphabet))
 			seq.fitness = 1.0
 			pop.populate(seq)
-			mutseq = wf.EvolvableSequence(randomSequence(100,'ATGC'))
+			mutseq = wf.EvolvableSequence(randomSequence(100,alphabet))
 			mutseq.fitness = seq.fitness + dx
 			mutentry = pop.inject(mutseq)
 			res = pop.evolveUntilFixationOrLossOf(mutentry)
@@ -167,6 +167,13 @@ class test009(unittest.TestCase):
 				n_fixations += 1
 		print n_fixations, n_total, n_fixations/float(n_total), predicted_fixation_probability
 			
+class test010(unittest.TestCase):
+	"""Coalescence"""
+	def test_run(self):
+		alphabet = 'ATGC'
+		pop = wf.Population(100,wf.SimpleMutator(0.01,alphabet))
+		pop.populate(wf.EvolvableSequence(randomSequence(100,alphabet)))
+		# 
 		
 
 if __name__=="__main__":
