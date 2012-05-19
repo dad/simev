@@ -189,6 +189,7 @@ class GeneBank:
 				del self.table[entry.id]
 				self.removeEntry(entry.parent)
 	
+	# Coalescent if 
 	def isCoalescent(self, entry):
 		res = entry.coalescent
 		if not entry.coalescent:
@@ -315,13 +316,13 @@ class Population:
 		"""Put the supplied organism into a randomly chosen spot in the population as a spontaneous mutant."""
 		slot = random.choice(range(len(self._members)))
 		slot_entry = self._members[slot]
-		new_entry = self.genebank.createEntry(organism, slot_, organism.fitness, self.generation_count)
+		new_entry = self.genebank.createEntry(organism, slot_entry, organism.fitness, self.generation_count)
 		# Add injected organism as if it were a spontaneous mutant
-		new_entry.parent = slot_entry.parent
-		self.genebank.addEntry(new_entry.parent)
+		#new_entry.parent = slot_entry.parent
+		#self.genebank.addEntry(new_entry.parent)
 		self._members[slot] = new_entry
 		self.genebank.addEntry(new_entry)
-		print self.genebank.isCoalescent(new_entry)
+		#print self.genebank.isCoalescent(new_entry)
 		# Kill existing organism
 		self.genebank.removeEntry(slot_entry)
 		return new_entry

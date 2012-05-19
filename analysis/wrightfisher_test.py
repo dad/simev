@@ -67,7 +67,8 @@ class test003(unittest.TestCase):
 
 class test004(unittest.TestCase):
 	def test_run(self):
-		e = wf.EvolvableSequence(randomSequence(100,'ATGC'))
+		alphabet = 'ATGC'
+		e = wf.EvolvableSequence(randomSequence(100,alphabet))
 		# Zero mutation rate copy
 		off = e.spawn(wf.SimpleMutator(0.0)).offspring
 		# Should yield identical sequences
@@ -78,7 +79,7 @@ class test005(unittest.TestCase):
 	def test_run(self):
 		alphabet = 'ATGC'
 		pop = wf.Population(100,wf.SimpleMutator(0.0001,alphabet))
-		seq = wf.EvolvableSequence(randomSequence(100,'ATGC'))
+		seq = wf.EvolvableSequence(randomSequence(100,alphabet))
 		pop.populate(seq)
 		pop.evolve(100)
 		dom_seq_entry = pop.dominantOrganism()
@@ -94,7 +95,7 @@ class test006(unittest.TestCase):
 		alphabet = 'ATGC'
 		n = 1000
 		pop = wf.Population(n,wf.SimpleMutator(0.0001,alphabet))
-		seq = wf.EvolvableSequence(randomSequence(90,'ATGC'))
+		seq = wf.EvolvableSequence(randomSequence(90,alphabet))
 		pop.populate(seq)
 		h = pop.histogram()
 		self.assertTrue(h[0] == n)
@@ -108,7 +109,7 @@ class test007(unittest.TestCase):
 	def test_run(self):
 		alphabet = 'ATGC'
 		mut = wf.SimpleMutator(0.1,alphabet)
-		seq = wf.EvolvableSequence(randomSequence(50,'ATGC'))
+		seq = wf.EvolvableSequence(randomSequence(50,alphabet))
 		mutres = seq.spawn(mut)
 		newseq = [x for x in mutres.offspring.sequence]
 		for m in mutres.mutations:
@@ -129,11 +130,11 @@ class test008(unittest.TestCase):
 		n_total = 0
 		for i in range(5*int(1/dx)):
 			pop = wf.Population(Ne,wf.SimpleMutator(0.0000001,alphabet))
-			seq = wf.EvolvableSequence(randomSequence(100,'ATGC'))
+			seq = wf.EvolvableSequence(randomSequence(100,alphabet))
 			# No fitness
 			seq.fitness = 0.0
 			pop.populate(seq)
-			mutseq = wf.EvolvableSequence(randomSequence(100,'ATGC'))
+			mutseq = wf.EvolvableSequence(randomSequence(100,alphabet))
 			mutseq.fitness = 1.0
 			mutentry = pop.inject(mutseq)
 			print ''
@@ -142,6 +143,12 @@ class test008(unittest.TestCase):
 			res = pop.evolveUntilFixationOrLossOf(mutentry)
 			# Everyone else has zero fitness -- fixation is assured.
 			self.assertTrue(res.fixed)
+			# Fixation must have happened in a single generation.
+			self.assertTrue(res.time_to_fixation == 1)
+			# Parent must be the injected sequence
+			self.assertTrue(res.members[0].parent == mutentry)
+			# Refcount of parent should be population size plus one
+			self.assertTrue(res.members[0].count == Ne+1)
 		
 class test009(unittest.TestCase):
 	"""Predicting probability of fixation"""
