@@ -30,19 +30,24 @@ def randomSequence(n, alphabet):
 ## TEST CASES
 
 class test001(unittest.TestCase):
-	"""basic run"""
-	def test_run(self):
+	"""background"""
+	def test_members(self):
 		alphabet='ATGC'
-		p = wf.Population(10, wf.SimpleMutator(0.01,alphabet))
-		p.populate(TraitOrganism())
-		p.evolve(1000)
-		#print len(p.members)
-		#for o in p.members:
-		#	print o.trait
-
-class test002(unittest.TestCase):
-	"""pickByIndex"""
-	def test_run(self):
+		N = random.randint(10,100)
+		pop = wf.WrightFisherPopulation(N, wf.SimpleMutator(0.01,alphabet))
+		pop.populate(TraitOrganism())
+		for m in pop.members:
+			self.assertTrue(pop.count(m)==N)
+	
+	def test_choice(self):
+		sc = wf.SampleCounter()
+		for al in string.letters:
+			sc[al] = 0
+		sc['a'] = 10
+		c = sc.choice()
+		self.assertTrue(c == 'a')
+		
+	def test_pick_index_by_prob(self):
 		n = 100
 		v = range(n)
 		sv = sum(v)
@@ -55,11 +60,22 @@ class test002(unittest.TestCase):
 			#print x, wf.pickIndexByProbability(cum_probs, x/float(n))
 			self.assertTrue(wf.pickIndexByProbability(cum_probs, x/float(n)) == x)
 
+class test002(unittest.TestCase):
+	"""basic run"""
+	def test_basic_run(self):
+		alphabet='ATGC'
+		p = wf.WrightFisherPopulation(10, wf.SimpleMutator(0.01,alphabet))
+		p.populate(TraitOrganism())
+		p.evolve(1000)
+		#print len(p.members)
+		#for o in p.members:
+		#	print o.trait
+
 class test003(unittest.TestCase):
 	"""Sequence"""
 	def test_run(self):
 		alphabet = 'ATGC'
-		p = wf.Population(10, wf.SimpleMutator(0.01,alphabet))
+		p = wf.WrightFisherPopulation(10, wf.SimpleMutator(0.01,alphabet))
 		p.populate(wf.EvolvableSequence(randomSequence(20,alphabet)))
 		p.evolve(1000)
 		#for m in p.members:
@@ -78,7 +94,7 @@ class test005(unittest.TestCase):
 	"""Tracking frequency"""
 	def test_run(self):
 		alphabet = 'ATGC'
-		pop = wf.Population(100,wf.SimpleMutator(0.0001,alphabet))
+		pop = wf.WrightFisherPopulation(100,wf.SimpleMutator(0.0001,alphabet))
 		seq = wf.EvolvableSequence(randomSequence(100,alphabet))
 		pop.populate(seq)
 		pop.evolve(100)
@@ -94,7 +110,7 @@ class test006(unittest.TestCase):
 	def test_run(self):
 		alphabet = 'ATGC'
 		n = 1000
-		pop = wf.Population(n,wf.SimpleMutator(0.0001,alphabet))
+		pop = wf.WrightFisherPopulation(n,wf.SimpleMutator(0.0001,alphabet))
 		seq = wf.EvolvableSequence(randomSequence(90,alphabet))
 		pop.populate(seq)
 		h = pop.histogram()
@@ -129,18 +145,27 @@ class test008(unittest.TestCase):
 		n_fixations = 0
 		n_total = 0
 		for i in range(5*int(1/dx)):
-			pop = wf.Population(Ne,wf.SimpleMutator(0.0000001,alphabet))
+			pop = wf.WrightFisherPopulation(Ne,wf.SimpleMutator(0.0000001,alphabet))
 			seq = wf.EvolvableSequence(randomSequence(100,alphabet))
 			# No fitness
 			seq.fitness = 0.0
-			pop.populate(seq)
+			parent = pop.populate(seq)
+			# Check to ensure coalescence
+			self.assertTrue(pop.genebank.isCoalescent(parent))
+			print pop.histogram()
 			mutseq = wf.EvolvableSequence(randomSequence(100,alphabet))
 			mutseq.fitness = 1.0
 			mutentry = pop.inject(mutseq)
-			print ''
-			for m in pop.members:
-				print m.fitness
-			res = pop.evolveUntilFixationOrLossOf(mutentry)
+			print pop.histogram()
+			#print ''
+			#for m in pop.members:
+			#	print m
+			pop.evolve(1)
+			print mutentry
+			print pop.genebank.isCoalescent(mutentry)
+			self.assertTrue(pop.genebank.isCoalescent(mutentry))
+			
+			#res = pop.evolveUntilFixationOrLossOf(mutentry)
 			# Everyone else has zero fitness -- fixation is assured.
 			self.assertTrue(res.fixed)
 			# Fixation must have happened in a single generation.
@@ -161,10 +186,12 @@ class test009(unittest.TestCase):
 		n_fixations = 0
 		n_total = 0
 		for i in range(5*int(1/dx)):
-			pop = wf.Population(Ne,wf.SimpleMutator(mu,alphabet))
+			pop = wf.WrightFisherPopulation(Ne,wf.SimpleMutator(mu,alphabet))
 			seq = wf.EvolvableSequence(randomSequence(100,alphabet))
 			seq.fitness = 1.0
-			pop.populate(seq)
+			parent = pop.populate(seq)
+			# Check to ensure coalescence
+			self.assertTrue(pop.genebank.isCoalescent(parent))
 			mutseq = wf.EvolvableSequence(randomSequence(100,alphabet))
 			mutseq.fitness = seq.fitness + dx
 			mutentry = pop.inject(mutseq)
@@ -178,7 +205,7 @@ class test010(unittest.TestCase):
 	"""Coalescence"""
 	def test_run(self):
 		alphabet = 'ATGC'
-		pop = wf.Population(100,wf.SimpleMutator(0.01,alphabet))
+		pop = wf.WrightFisherPopulation(100,wf.SimpleMutator(0.01,alphabet))
 		pop.populate(wf.EvolvableSequence(randomSequence(100,alphabet)))
 		# 
 		

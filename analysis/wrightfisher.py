@@ -1,4 +1,4 @@
-import sys, os, math, string, random, unittest
+import sys, os, math, string, random, collections, unittest
 import stats
 
 class NotImplementedException(Exception):
@@ -31,6 +31,9 @@ class Evolvable:
 	def spawn(self, mutator):
 		"""Replication with mutation."""
 		raise NotImplementedException, "Must override"
+
+
+## Mutation
 
 class MutationInfo:
 	"""Record storing information about mutations."""
@@ -72,6 +75,7 @@ class EvolvableSequence(Evolvable):
 		e = EvolvableSequence(self.sequence)
 		return e
 
+	# DAD: use FitnessEvaluator pattern?
 	@property
 	def fitness(self):
 		return self._fitness
@@ -121,7 +125,7 @@ class GeneBankEntry:
 		self.fitness = fitness
 		self.birthtime = birthtime
 		self._refcount = 0
-		self.coalescent = False
+		self._coalescent = False
 		self._id = None
 
 	def addReference(self):
@@ -138,11 +142,11 @@ class GeneBankEntry:
 
 	@property
 	def coalescent(self):
-		return self.coalescent
+		return self._coalescent
 	
 	@coalescent.setter
 	def coalescent(self, bool):
-		self.coalescent = bool
+		self._coalescent = bool
 	
 	@property
 	def id(self):
@@ -153,7 +157,7 @@ class GeneBankEntry:
 		self._id = the_id
 	
 	def __str__(self):
-		return "{} ({})".format(self.organism, self.refcount)
+		return "{} (n={}, birth={}, coal={})".format(self.id, self._refcount, self.birthtime, self.coalescent)
 
 	def __eq__(self, other):
 		# DAD: not quite sure how strict to be here
@@ -178,6 +182,9 @@ class GeneBank:
 
 	def getEntry(self, id):
 		return self.table.get(id)
+
+	def __getitem__(self, id):
+		return self.table[id]
 		
 	def addEntry(self, entry):
 		entry.addReference()
@@ -189,12 +196,18 @@ class GeneBank:
 				del self.table[entry.id]
 				self.removeEntry(entry.parent)
 	
-	# Coalescent if 
+	# Assess whether given organism, assumed to be in the current population, is
+	# coalescent, i.e., shares a genotype with the last common ancestor of the population.
+	# Organisms are born non-coalescent, can switch to become coalescent, and then
+	# never lose that status.
 	def isCoalescent(self, entry):
+		print "check coal for", entry
 		res = entry.coalescent
 		if not entry.coalescent:
+			# Check for coalescence. If parent is coalescent, and has a count of 1,
+			# then we are coalescent as well.
 			parent = entry.parent
-			if not parent is None and self.isCoalescent(parent):
+			if not parent is None and parent.coalescent:
 				if parent.count == 1:
 					entry.coalescent = True
 					res = True
@@ -204,15 +217,56 @@ class FixationResults:
 	def __init__(self):
 		self.fixed = None
 		self.time_to_fixation = None
-	
 
 class Population:
+	"""An evolving population."""
+	def __init__(self, max_population_size, mutator, fitness_evaluator):
+		raise NotImplementedException, "Must override."
+
+	def evolve(self, num_generations):
+		pass
+	
+	def populate(self, genotype):
+		"""Populates the population with instances of the provided genotype."""
+		pass
+		
+class SampleCounter(collections.Counter):
+	def choice(self):
+		"""Choose an element with probability equal to k/n, where k is the element count and n = sum(k)"""
+		n = sum(self.values())
+		ordered = self.most_common()
+		r = random.randint(0,n-1)
+		i = 0
+		k = ordered[0][1]
+		while r>k:
+			i+=1
+			k += ordered[i][1]
+		return ordered[i][0]
+		
+	def elements(self):
+		"""Iterate over elements, repeating each according to its frequency"""
+		for (key, count) in self.items():
+			for n in xrange(count):
+				yield key
+		
+
+class WrightFisherPopulation(Population):
+	"""An evolving population.
+	A population consists of N (.population_size) individuals, which are themselves instances of M < N genotypes.
+	Evolution proceeds by Wright-Fisher sampling. In generation t, N offspring individuals are generated. The probability that one
+	individual offspring has, as its parent, an individual in generation t-1 is equal to the fitness of the parent.
+	
+	To accommodate large N, the implementation uses reference counting. If there are n_i
+	instances of genotype i in the population, then the population will store a single instance of i with a count of n_i.
+	
+	To track genotypes
+	"""
 	def __init__(self, population_size, mutator):
 		self.population_size = population_size
 		# List of members of the population. These are GeneBankEntry objects, which wrap organisms to allow reference-counting.
-		self._members = []
+		self._members = SampleCounter()
 		# A buffer for building subsequent generations of the population.
-		self._members_buffer = []
+		self._members_buffer = SampleCounter()
 		# Class supporting the .mutate() method.
 		self.mutator = mutator
 		# The gene bank: the set of organisms along the line of descent.
@@ -221,11 +275,8 @@ class Population:
 		self.generation_count = 0
 
 	def addMember(self, entry):
-		# Add to the population
-		if len(self._members) <= self.population_size:
-			self._members.append(entry)
-		else:
-			self.inject(entry)
+		# Add to the population. Does not enforce population size.
+		self._members[entry.id] += 1
 
 	def createOffspring(self, organism_entry, mutate=True):
 		"""Creates offspring entry. Does not add to population."""
@@ -252,42 +303,51 @@ class Population:
 			self.addMember(self.createOffspring(parent_entry, mutate=False))
 		# Remove the parent -- it's no longer in the population
 		self.genebank.removeEntry(parent_entry)
+		return parent_entry
 
 	def makeCumulativeProbabilities(self):
+		"""Make sampleable list weighted by fitness and count (degeneracy) in population"""
 		total_fitness = 0.0
 		# Cache fitness and compute total fitness
-		for m in self._members:
+		sorted_entries = []
+		for (mk, m_count) in self._members.items():
+			m = self.genebank[mk]
+			# Cache the fitness...DAD we may need a FitnessEvaluator instance in here.
 			m.cache_fitness = m.organism.fitness
-			total_fitness += m.cache_fitness
+			total_fitness += m.cache_fitness*m_count
+			sorted_entries.append((m.cache_fitness*m_count, m))
 		# Create cumulative probabilities
-		self._members.sort(key = lambda x: x.cache_fitness, reverse=True)
+		sorted_entries.sort(reverse=True)
 		cum_probs = []
 		cum_prob = 0.0
-		for m in self._members:
-			cum_prob += m.cache_fitness/total_fitness
+		for (fit, m) in sorted_entries:
+			cum_prob += fit/total_fitness
 			cum_probs.append(cum_prob)
-		return cum_probs
+		return cum_probs, sorted_entries
 
 	def evolve(self, num_generations):
 		for n in xrange(num_generations):
 			# Clear out the buffer
-			self._members_buffer = []
-			cum_probs = self.makeCumulativeProbabilities()
+			self._members_buffer = SampleCounter()
+			cum_probs, sorted_entries = self.makeCumulativeProbabilities()
 			# Increment generations
 			self.generation_count += 1
 			# Replicate into the new generation
-			for nm in xrange(len(self._members)):
+			for nm in xrange(self.population_size):
 				# Pick parent according to fitness: Wright-Fisher sampling
-				parent_entry = self._members[pickIndexByProbability(cum_probs, random.random())]
+				parent_entry = sorted_entries[pickIndexByProbability(cum_probs, random.random())][1]
 				# Reproduce with mutation
 				spawn_entry = self.createOffspring(parent_entry)
-				# Insert offspring into new gen
-				self._members_buffer.append(spawn_entry)
+				# Insert offspring into new generation
+				self._members_buffer[spawn_entry.id] += 1
+				self.genebank.addEntry(spawn_entry)
 			# Remove the previous generation
-			for m in self._members:
+			# DAD: should shortcut and remove whole counts
+			for m in self.members:
 				self.genebank.removeEntry(m)
 			# Replace population with the buffer
 			self._members = self._members_buffer
+			self._members_buffer = None
 	
 	def evolveUntilFixationOrLossOf(self, entry):
 		"""Evolve until organism specified in entry is lost or fixed.
@@ -295,7 +355,7 @@ class Population:
 		"""
 		start_generations = self.generations
 		while entry.count > 0 and not self.genebank.isCoalescent(entry):
-			#print entry.count, self.genebank.isCoalescent(entry), self.histogram()
+			print entry.count, self.genebank.isCoalescent(entry), self.histogram()
 			self.evolve(1)
 		# Observe the results
 		res = FixationResults()
@@ -312,17 +372,19 @@ class Population:
 		self._members = []
 		self.genebank.erase()
 	
+	def choice(self):
+		return self.genebank[self._members.choice()]
+	
 	def inject(self, organism):
 		"""Put the supplied organism into a randomly chosen spot in the population as a spontaneous mutant."""
-		slot = random.choice(range(len(self._members)))
-		slot_entry = self._members[slot]
-		new_entry = self.genebank.createEntry(organism, slot_entry, organism.fitness, self.generation_count)
+		slot_entry = self.choice()
+		new_entry = self.genebank.createEntry(organism, slot_entry.parent, organism.fitness, self.generation_count)
 		# Add injected organism as if it were a spontaneous mutant
 		#new_entry.parent = slot_entry.parent
 		#self.genebank.addEntry(new_entry.parent)
-		self._members[slot] = new_entry
+		self._members[slot_entry.id] -= 1
+		self._members[new_entry.id] += 1
 		self.genebank.addEntry(new_entry)
-		#print self.genebank.isCoalescent(new_entry)
 		# Kill existing organism
 		self.genebank.removeEntry(slot_entry)
 		return new_entry
@@ -336,16 +398,11 @@ class Population:
 
 	def histogram(self):
 		"""Return a sorted count of the number of each type of organism in the population"""
-		ids = [e.id for e in self._members]
-		hist = []
-		for id in set(ids):
-			hist.append(ids.count(id))
-		return sorted(hist, reverse=True)
+		return [x[1] for x in self._members.most_common()]
 
 	def dominantOrganism(self):
-		ids = [e.id for e in self._members]
-		id_counts = sorted([(ids.count(id),id) for id in ids], reverse=True)
-		return self.genebank.getEntry(id_counts[0][1])
+		id = self._members.most_common(1)[0][0]
+		return self.genebank[id]
 		
 	def averageFitness(self):
 		total_fitness = 0.0
@@ -353,7 +410,8 @@ class Population:
 			m.cache_fitness = m.organism.fitness()
 			total_fitness += m.cache_fitness
 		return total_fitness/self.size()
-				
+	
+	## Properties
 	@property
 	def size(self):
 		assert len(self._members) == self.population_size
@@ -365,13 +423,14 @@ class Population:
 
 	@property
 	def members(self):
-		for m in self._members:
-			yield m
+		"""Return an iterator over the members of the population."""
+		# DAD: instead of a list of members, take into account their
+		# count in the population. Implement.
+		for m in self._members.elements():
+			yield self.genebank[m]
 
 	def count(self, entry):
-		ids = [e.id for e in self._members]
-		return ids.count(entry.id)
-		
+		return self._members[entry.id]
 		
 	def __str__(self):
 		for m in self._members:
