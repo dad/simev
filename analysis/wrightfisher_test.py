@@ -151,7 +151,7 @@ class test008(unittest.TestCase):
 			seq.fitness = 0.0
 			parent = pop.populate(seq)
 			# Check to ensure coalescence
-			self.assertTrue(pop.genebank.isCoalescent(parent))
+			self.assertTrue(pop.isCoalescent(parent))
 			print pop.histogram()
 			mutseq = wf.EvolvableSequence(randomSequence(100,alphabet))
 			mutseq.fitness = 1.0
@@ -162,8 +162,8 @@ class test008(unittest.TestCase):
 			#	print m
 			pop.evolve(1)
 			print mutentry
-			print pop.genebank.isCoalescent(mutentry)
-			self.assertTrue(pop.genebank.isCoalescent(mutentry))
+			print pop.isCoalescent(mutentry)
+			self.assertTrue(pop.isCoalescent(mutentry))
 			
 			#res = pop.evolveUntilFixationOrLossOf(mutentry)
 			# Everyone else has zero fitness -- fixation is assured.
@@ -185,13 +185,14 @@ class test009(unittest.TestCase):
 		predicted_fixation_probability = wf.probabilityOfFixation(Ne, dx)
 		n_fixations = 0
 		n_total = 0
+		return
 		for i in range(5*int(1/dx)):
 			pop = wf.WrightFisherPopulation(Ne,wf.SimpleMutator(mu,alphabet))
 			seq = wf.EvolvableSequence(randomSequence(100,alphabet))
 			seq.fitness = 1.0
 			parent = pop.populate(seq)
 			# Check to ensure coalescence
-			self.assertTrue(pop.genebank.isCoalescent(parent))
+			self.assertTrue(pop.isCoalescent(parent))
 			mutseq = wf.EvolvableSequence(randomSequence(100,alphabet))
 			mutseq.fitness = seq.fitness + dx
 			mutentry = pop.inject(mutseq)
@@ -202,12 +203,14 @@ class test009(unittest.TestCase):
 		print n_fixations, n_total, n_fixations/float(n_total), predicted_fixation_probability
 			
 class test010(unittest.TestCase):
-	"""Coalescence"""
-	def test_run(self):
+	"""LCA"""
+	def test_lca(self):
 		alphabet = 'ATGC'
 		pop = wf.WrightFisherPopulation(100,wf.SimpleMutator(0.01,alphabet))
 		pop.populate(wf.EvolvableSequence(randomSequence(100,alphabet)))
-		# 
+		pop.evolve(100)
+		e = pop.lastCommonAncestor()
+		print e
 		
 
 if __name__=="__main__":

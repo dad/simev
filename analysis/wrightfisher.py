@@ -196,23 +196,6 @@ class GeneBank:
 				del self.table[entry.id]
 				self.removeEntry(entry.parent)
 	
-	# Assess whether given organism, assumed to be in the current population, is
-	# coalescent, i.e., shares a genotype with the last common ancestor of the population.
-	# Organisms are born non-coalescent, can switch to become coalescent, and then
-	# never lose that status.
-	def isCoalescent(self, entry):
-		print "check coal for", entry
-		res = entry.coalescent
-		if not entry.coalescent:
-			# Check for coalescence. If parent is coalescent, and has a count of 1,
-			# then we are coalescent as well.
-			parent = entry.parent
-			if not parent is None and parent.coalescent:
-				if parent.count == 1:
-					entry.coalescent = True
-					res = True
-		return res
-
 class FixationResults:
 	def __init__(self):
 		self.fixed = None
@@ -278,8 +261,12 @@ class WrightFisherPopulation(Population):
 		# Add to the population. Does not enforce population size.
 		self._members[entry.id] += 1
 
+	def removeMember(self, entry):
+		# Remove from the population. Does not enforce population size.
+		self._members[entry.id] -= 1
+
 	def createOffspring(self, organism_entry, mutate=True):
-		"""Creates offspring entry. Does not add to population."""
+		"""Creates offspring entry and add to GeneBank. Does not add to population."""
 		# Begin assuming no mutation will occur
 		new_entry = organism_entry
 		if mutate:
@@ -288,6 +275,8 @@ class WrightFisherPopulation(Population):
 			if spawnres.mutated:
 				# Create an entry for the GeneBank
 				new_entry = self.genebank.createEntry(spawnres.offspring, organism_entry, spawnres.offspring.fitness, self.generation_count)
+		else:
+			organism_entry.parent = organism_entry
 		# Add to the GeneBank
 		self.genebank.addEntry(new_entry)
 		return new_entry
@@ -300,7 +289,8 @@ class WrightFisherPopulation(Population):
 		parent_entry.coalescent = True
 		# All new population
 		for i in range(self.population_size):
-			self.addMember(self.createOffspring(parent_entry, mutate=False))
+			offs = self.createOffspring(parent_entry, mutate=False)
+			self.addMember(offs)
 		# Remove the parent -- it's no longer in the population
 		self.genebank.removeEntry(parent_entry)
 		return parent_entry
@@ -340,10 +330,10 @@ class WrightFisherPopulation(Population):
 				spawn_entry = self.createOffspring(parent_entry)
 				# Insert offspring into new generation
 				self._members_buffer[spawn_entry.id] += 1
-				self.genebank.addEntry(spawn_entry)
 			# Remove the previous generation
 			# DAD: should shortcut and remove whole counts
 			for m in self.members:
+				#print m.count
 				self.genebank.removeEntry(m)
 			# Replace population with the buffer
 			self._members = self._members_buffer
@@ -354,18 +344,48 @@ class WrightFisherPopulation(Population):
 		Fixation is defined as when the entry becomes coalescent.
 		"""
 		start_generations = self.generations
-		while entry.count > 0 and not self.genebank.isCoalescent(entry):
-			print entry.count, self.genebank.isCoalescent(entry), self.histogram()
+		while self.count(entry) > 0 and not self.isCoalescent(entry):
+			print self.count(entry), self.isCoalescent(entry), self.histogram()
 			self.evolve(1)
 		# Observe the results
 		res = FixationResults()
-		if entry.count == 0:
+		if self.count(entry) == 0:
 			res.fixed = False
 			res.time_to_fixation = None
 		else:
 			res.fixed = True
 			res.time_to_fixation = self.generations - start_generations
 		return res
+
+	# Assess whether given organism, assumed to be in the current population, is
+	# coalescent, i.e., shares a genotype with the last common ancestor of the population.
+	# Organisms are born non-coalescent, can switch to become coalescent, and then
+	# never lose that status.
+	def isCoalescent(self, entry):
+		pid = -1
+		if not entry.parent is None:
+			pid = entry.parent.id
+		print "check coal for id={} p={} c={} (n={})".format(entry.id, pid, entry.coalescent, self.count(entry))
+		res = entry.coalescent
+		if not entry.coalescent:
+			# Check for coalescence. If parent is coalescent, and has a count of 1,
+			# then we are coalescent as well.
+			parent = entry.parent
+			if not parent is None and parent.coalescent:
+				if self.count(parent) == 1:
+					entry.coalescent = True
+					res = True
+		return res
+	
+	def lastCommonAncestor(self):
+		"""Get the last common ancestor of the population."""
+		ids = set(self._members.keys())
+		while len(ids)>1:
+			print "lca:", ids
+			new_ids = [self.genebank[id].parent.id for id in ids]
+			ids = set(new_ids)
+		print "lca:", ids
+		return self.genebank[list(ids)[0]]
 
 	def erase(self):
 		"""Get rid of all information in the population."""
@@ -379,14 +399,14 @@ class WrightFisherPopulation(Population):
 		"""Put the supplied organism into a randomly chosen spot in the population as a spontaneous mutant."""
 		slot_entry = self.choice()
 		new_entry = self.genebank.createEntry(organism, slot_entry.parent, organism.fitness, self.generation_count)
+		self.genebank.addEntry(new_entry)
 		# Add injected organism as if it were a spontaneous mutant
 		#new_entry.parent = slot_entry.parent
 		#self.genebank.addEntry(new_entry.parent)
-		self._members[slot_entry.id] -= 1
-		self._members[new_entry.id] += 1
-		self.genebank.addEntry(new_entry)
+		self.addMember(new_entry)
+		self.removeMember(slot_entry)
 		# Kill existing organism
-		self.genebank.removeEntry(slot_entry)
+		#self.genebank.removeEntry(slot_entry)
 		return new_entry
 
 	###########
