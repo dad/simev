@@ -239,8 +239,23 @@ class test012(unittest.TestCase):
 		for m in pop.members:
 			i += 1
 		self.assertTrue(i==Ne)
-		
-		
+
+class test013(unittest.TestCase):
+	"""very large populations"""
+	def test_simple_counting(self):
+		alphabet = 'ATGC'
+		dx = 0.1
+		mu = 0.0001
+		n_gens = 100
+		random.seed(3)
+		seq = wf.EvolvableSequence(randomSequence(100,alphabet))
+		for i in range(5):
+			Ne = 10**i
+			pop = wf.WrightFisherPopulation(Ne,wf.SimpleMutator(mu,alphabet))
+			pop.populate(seq)
+			pop.evolve(n_gens)
+			print "# evolved {} generations at Ne={}".format(n_gens, Ne)
+	
 
 if __name__=="__main__":
 	unittest.main(verbosity=2)
