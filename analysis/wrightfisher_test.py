@@ -1,4 +1,4 @@
-import sys, os, math, string, random, unittest
+import sys, os, math, string, random, unittest, time
 import stats
 import wrightfisher as wf
 
@@ -157,7 +157,7 @@ class test008(unittest.TestCase):
 		# Everyone else has zero fitness -- fixation is assured.
 		self.assertTrue(res.fixed)
 		# Fixation must have happened in a single generation.
-		self.assertTrue(res.time_to_fixation == 1)
+		self.assertTrue(res.time == 1)
 		# Parent must be the injected sequence
 		fixed_entry = pop.choice()
 		self.assertTrue(fixed_entry == mutentry)
@@ -172,9 +172,9 @@ class test009(unittest.TestCase):
 		predicted_fixation_probability = wf.probabilityOfFixation(Ne, dx)
 		n_fixations = 0
 		n_total = 0
+		n_trials = 5*int(1/dx)
 		random.seed(111)
-		return
-		for i in range(5*int(1/dx)):
+		for i in range(n_trials):
 			pop = wf.WrightFisherPopulation(Ne,wf.SimpleMutator(mu,alphabet))
 			seq = wf.EvolvableSequence(randomSequence(100,alphabet))
 			seq.fitness = 1.0
@@ -188,8 +188,16 @@ class test009(unittest.TestCase):
 			n_total += 1
 			if res.fixed:
 				n_fixations += 1
-			print n_total, n_fixations
-		print n_fixations, n_total, n_fixations/float(n_total), predicted_fixation_probability
+			#print n_total, n_trials, n_fixations, res.fixed, res.time, n_fixations/float(n_total), predicted_fixation_probability
+		# DAD: mean is 
+		est_prob = n_fixations/float(n_total)
+		p = predicted_fixation_probability
+		exp_fixations = n_trials*p
+		sd = math.sqrt(n_trials*p*(1.0-p))
+		# 
+		self.assertTrue(n_fixations <= (exp_fixations+2*sd))
+		self.assertTrue(n_fixations >= (exp_fixations-2*sd))
+		#print n_fixations, n_total, n_fixations/float(n_total), predicted_fixation_probability
 			
 class test010(unittest.TestCase):
 	"""LCA"""
@@ -241,20 +249,22 @@ class test012(unittest.TestCase):
 		self.assertTrue(i==Ne)
 
 class test013(unittest.TestCase):
-	"""very large populations"""
-	def test_simple_counting(self):
+	"""large populations"""
+	def test_large_pop(self):
 		alphabet = 'ATGC'
 		dx = 0.1
 		mu = 0.0001
 		n_gens = 100
 		random.seed(3)
 		seq = wf.EvolvableSequence(randomSequence(100,alphabet))
-		for i in range(5):
+		for i in range(4):
+			tstart = time.time()
 			Ne = 10**i
 			pop = wf.WrightFisherPopulation(Ne,wf.SimpleMutator(mu,alphabet))
 			pop.populate(seq)
 			pop.evolve(n_gens)
-			print "# evolved {} generations at Ne={}".format(n_gens, Ne)
+			tend = time.time()
+			print "# evolved {} generations at Ne={} (t={}ms)".format(n_gens, Ne, (tend-tstart)*1000)
 	
 
 if __name__=="__main__":

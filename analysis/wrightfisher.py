@@ -6,7 +6,7 @@ class NotImplementedException(Exception):
 		myvar = 1
 		
 def probabilityOfFixation(Ne, s):
-	return (1 - math.exp(2*s))/(1 - math.exp(2*Ne*s))
+	return (1 - math.exp(-2*s))/(1 - math.exp(-2*Ne*s))
 
 class SpawnResult:
 	"""Record storing results of replication with mutation."""
@@ -365,12 +365,8 @@ class WrightFisherPopulation(Population):
 			self.evolve(1)
 		# Observe the results
 		res = FixationResults()
-		if self.count(entry) == 0:
-			res.fixed = False
-			res.time_to_fixation = None
-		else:
-			res.fixed = True
-			res.time_to_fixation = self.generations - start_generations
+		res.time = self.generations - start_generations		
+		res.fixed = (self.count(entry) != 0)
 		return res
 
 	# Assess whether given organism, assumed to be in the current population, is
