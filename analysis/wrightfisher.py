@@ -157,7 +157,7 @@ class GeneBankEntry:
 		self._id = the_id
 	
 	def __str__(self):
-		return "{} (n={}, birth={}, coal={})".format(self.id, self._refcount, self.birthtime, self.coalescent)
+		return "{} (f={}, par={}, n={}, birth={}, coal={})".format(self.id, self.fitness, self.parent.id, self._refcount, self.birthtime, self.coalescent)
 
 	def __eq__(self, other):
 		# DAD: not quite sure how strict to be here
@@ -195,6 +195,17 @@ class GeneBank:
 				# Refcount is zero: time to remove the organism from our world.
 				del self.table[entry.id]
 				self.removeEntry(entry.parent)
+	
+	def lineage(self, entry):
+		lin = [entry]
+		e = entry
+		while not e.parent is None:
+			lin.append(e.parent)
+			e = e.parent
+		return lin
+	
+	def __str__(self):
+		return ','.join(["{}:{}".format(v.id,v.count) for v in self.table.values()])
 	
 class FixationResults:
 	def __init__(self):
@@ -275,8 +286,8 @@ class WrightFisherPopulation(Population):
 			if spawnres.mutated:
 				# Create an entry for the GeneBank
 				new_entry = self.genebank.createEntry(spawnres.offspring, organism_entry, spawnres.offspring.fitness, self.generation_count)
-		else:
-			organism_entry.parent = organism_entry
+		# DAD: this is wrong. Parent should be the parental genotype.
+		#new_entry.parent = organism_entry
 		# Add to the GeneBank
 		self.genebank.addEntry(new_entry)
 		return new_entry
@@ -287,9 +298,12 @@ class WrightFisherPopulation(Population):
 		parent = organism
 		parent_entry = self.genebank.createEntry(parent, None, parent.fitness, self.generation_count)
 		parent_entry.coalescent = True
+		self.genebank.addEntry(parent_entry)
+		# Now create the population individuals, who will have parent_entry as their parent
+		offspring = self.genebank.createEntry(organism, parent_entry, organism.fitness, self.generation_count)
 		# All new population
 		for i in range(self.population_size):
-			offs = self.createOffspring(parent_entry, mutate=False)
+			offs = self.createOffspring(offspring, mutate=False)
 			self.addMember(offs)
 		# Remove the parent -- it's no longer in the population
 		self.genebank.removeEntry(parent_entry)
@@ -306,6 +320,7 @@ class WrightFisherPopulation(Population):
 			m.cache_fitness = m.organism.fitness
 			total_fitness += m.cache_fitness*m_count
 			sorted_entries.append((m.cache_fitness*m_count, m))
+		assert total_fitness > 0.0, "Total fitness = {} <= 0.0, aborting".format(total_fitness)
 		# Create cumulative probabilities
 		sorted_entries.sort(reverse=True)
 		cum_probs = []
@@ -326,10 +341,11 @@ class WrightFisherPopulation(Population):
 			for nm in xrange(self.population_size):
 				# Pick parent according to fitness: Wright-Fisher sampling
 				parent_entry = sorted_entries[pickIndexByProbability(cum_probs, random.random())][1]
-				# Reproduce with mutation
+				# Reproduce with mutation; add to genebank
 				spawn_entry = self.createOffspring(parent_entry)
 				# Insert offspring into new generation
 				self._members_buffer[spawn_entry.id] += 1
+				#print nm, spawn_entry.id, parent_entry.id
 			# Remove the previous generation
 			# DAD: should shortcut and remove whole counts
 			for m in self.members:
@@ -345,7 +361,7 @@ class WrightFisherPopulation(Population):
 		"""
 		start_generations = self.generations
 		while self.count(entry) > 0 and not self.isCoalescent(entry):
-			print self.count(entry), self.isCoalescent(entry), self.histogram()
+			#print self.count(entry), self.isCoalescent(entry), self.histogram()
 			self.evolve(1)
 		# Observe the results
 		res = FixationResults()
@@ -362,6 +378,12 @@ class WrightFisherPopulation(Population):
 	# Organisms are born non-coalescent, can switch to become coalescent, and then
 	# never lose that status.
 	def isCoalescent(self, entry):
+		# DAD: can cache...set entry.coalescent = True, only check LCA if not coalescent.
+		# That is optimization; do not do prematurely... ;)
+		lca = self.lastCommonAncestor()
+		return entry == lca
+	
+	def old_stuff(self, entry):
 		pid = -1
 		if not entry.parent is None:
 			pid = entry.parent.id
@@ -377,14 +399,21 @@ class WrightFisherPopulation(Population):
 					res = True
 		return res
 	
+	
 	def lastCommonAncestor(self):
 		"""Get the last common ancestor of the population."""
 		ids = set(self._members.keys())
+		gb = self.genebank
+		lineages = [[x.id for x in gb.lineage(gb[k])] for k in ids]
+		s = [set(x) for x in lineages]
+		intersect = reduce(lambda x,y: x.intersection(y), s)
+		return gb[max(intersect)]
 		while len(ids)>1:
-			print "lca:", ids
-			new_ids = [self.genebank[id].parent.id for id in ids]
+			#print "lca:", ids
+			parents = [gb[id].parent for id in ids]
+			new_ids = [par.id for par in parents if not par is None]
 			ids = set(new_ids)
-		print "lca:", ids
+		#print "lca:", ids
 		return self.genebank[list(ids)[0]]
 
 	def erase(self):
@@ -444,8 +473,6 @@ class WrightFisherPopulation(Population):
 	@property
 	def members(self):
 		"""Return an iterator over the members of the population."""
-		# DAD: instead of a list of members, take into account their
-		# count in the population. Implement.
 		for m in self._members.elements():
 			yield self.genebank[m]
 

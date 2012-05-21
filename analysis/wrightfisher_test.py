@@ -140,40 +140,27 @@ class test008(unittest.TestCase):
 		alphabet = 'ATGC'
 		dx = 0.1
 		Ne = 20
-		mu = 0.0001
-		predicted_fixation_probability = wf.probabilityOfFixation(Ne, dx)
-		n_fixations = 0
-		n_total = 0
-		for i in range(5*int(1/dx)):
-			pop = wf.WrightFisherPopulation(Ne,wf.SimpleMutator(0.0000001,alphabet))
-			seq = wf.EvolvableSequence(randomSequence(100,alphabet))
-			# No fitness
-			seq.fitness = 0.0
-			parent = pop.populate(seq)
-			# Check to ensure coalescence
-			self.assertTrue(pop.isCoalescent(parent))
-			print pop.histogram()
-			mutseq = wf.EvolvableSequence(randomSequence(100,alphabet))
-			mutseq.fitness = 1.0
-			mutentry = pop.inject(mutseq)
-			print pop.histogram()
-			#print ''
-			#for m in pop.members:
-			#	print m
-			pop.evolve(1)
-			print mutentry
-			print pop.isCoalescent(mutentry)
-			self.assertTrue(pop.isCoalescent(mutentry))
-			
-			#res = pop.evolveUntilFixationOrLossOf(mutentry)
-			# Everyone else has zero fitness -- fixation is assured.
-			self.assertTrue(res.fixed)
-			# Fixation must have happened in a single generation.
-			self.assertTrue(res.time_to_fixation == 1)
-			# Parent must be the injected sequence
-			self.assertTrue(res.members[0].parent == mutentry)
-			# Refcount of parent should be population size plus one
-			self.assertTrue(res.members[0].count == Ne+1)
+		mu = 0.001
+		pop = wf.WrightFisherPopulation(Ne,wf.SimpleMutator(mu,alphabet))
+		seq = wf.EvolvableSequence(randomSequence(100,alphabet))
+		random.seed(3)
+		# No fitness
+		seq.fitness = 0.0
+		parent = pop.populate(seq)
+		# Check to ensure coalescence
+		self.assertTrue(pop.isCoalescent(parent))
+		mutseq = wf.EvolvableSequence(randomSequence(100,alphabet))
+		mutseq.fitness = 1.0
+		mutentry = pop.inject(mutseq)
+		cum_probs, sorted_entries = pop.makeCumulativeProbabilities()
+		res = pop.evolveUntilFixationOrLossOf(mutentry)
+		# Everyone else has zero fitness -- fixation is assured.
+		self.assertTrue(res.fixed)
+		# Fixation must have happened in a single generation.
+		self.assertTrue(res.time_to_fixation == 1)
+		# Parent must be the injected sequence
+		fixed_entry = pop.choice()
+		self.assertTrue(fixed_entry == mutentry)
 		
 class test009(unittest.TestCase):
 	"""Predicting probability of fixation"""
@@ -185,6 +172,7 @@ class test009(unittest.TestCase):
 		predicted_fixation_probability = wf.probabilityOfFixation(Ne, dx)
 		n_fixations = 0
 		n_total = 0
+		random.seed(111)
 		return
 		for i in range(5*int(1/dx)):
 			pop = wf.WrightFisherPopulation(Ne,wf.SimpleMutator(mu,alphabet))
@@ -200,18 +188,61 @@ class test009(unittest.TestCase):
 			n_total += 1
 			if res.fixed:
 				n_fixations += 1
+			print n_total, n_fixations
 		print n_fixations, n_total, n_fixations/float(n_total), predicted_fixation_probability
 			
 class test010(unittest.TestCase):
 	"""LCA"""
 	def test_lca(self):
 		alphabet = 'ATGC'
-		pop = wf.WrightFisherPopulation(100,wf.SimpleMutator(0.01,alphabet))
+		pop = wf.WrightFisherPopulation(100,wf.SimpleMutator(0.0001,alphabet))
 		pop.populate(wf.EvolvableSequence(randomSequence(100,alphabet)))
-		pop.evolve(100)
-		e = pop.lastCommonAncestor()
-		print e
+		for n in range(10):
+			pop.evolve(1)
+			#print pop.genebank
+			e = pop.lastCommonAncestor()
+			#print e
+		
+class test011(unittest.TestCase):
+	"""pop size"""
+	def test_pop_size(self):
+		alphabet = 'ATGC'
+		pop = wf.WrightFisherPopulation(100,wf.SimpleMutator(0.0001,alphabet))
+		pop.populate(wf.EvolvableSequence(randomSequence(100,alphabet)))
+		for n in range(10):
+			pop.evolve(1)
+			self.assertTrue(sum(pop._members.values()) == pop.population_size)
+
+class test012(unittest.TestCase):
+	"""simple counting"""
+	def test_simple_counting(self):
+		alphabet = 'ATGC'
+		dx = 0.1
+		Ne = 20
+		mu = 0.0001
+		pop = wf.WrightFisherPopulation(Ne,wf.SimpleMutator(mu,alphabet))
+		seq = wf.EvolvableSequence(randomSequence(100,alphabet))
+		random.seed(3)
+		# No fitness
+		seq.fitness = 0.0
+		parent = pop.populate(seq)
+		i = 0
+		for m in pop.members:
+			i += 1
+		self.assertTrue(i==Ne)
+		# Check to ensure coalescence
+		self.assertTrue(pop.isCoalescent(parent))
+		mutseq = wf.EvolvableSequence(randomSequence(100,alphabet))
+		mutseq.fitness = 1.0
+		mutentry = pop.inject(mutseq)
+		i = 0
+		for m in pop.members:
+			i += 1
+		self.assertTrue(i==Ne)
+		
 		
 
 if __name__=="__main__":
 	unittest.main(verbosity=2)
+	#t = test008("test_run")
+	#t.test_run()
