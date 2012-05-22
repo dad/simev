@@ -242,6 +242,14 @@ class SampleCounter(collections.Counter):
 		for (key, count) in self.items():
 			for n in xrange(count):
 				yield key
+	
+	def average(self, fxn):
+		tot = 0
+		tot_count = 0
+		for (key, count) in self.items():
+			tot += count*fxn(key)
+			tot_count += count
+		return tot/float(tot_count)
 		
 
 class WrightFisherPopulation(Population):
@@ -369,32 +377,15 @@ class WrightFisherPopulation(Population):
 		res.fixed = (self.count(entry) != 0)
 		return res
 
-	# Assess whether given organism, assumed to be in the current population, is
-	# coalescent, i.e., shares a genotype with the last common ancestor of the population.
-	# Organisms are born non-coalescent, can switch to become coalescent, and then
-	# never lose that status.
 	def isCoalescent(self, entry):
+		"""Assess whether given organism, assumed to be in the current population, is
+		coalescent, i.e., shares a genotype with the last common ancestor of the population.
+		Organisms are born non-coalescent, can switch to become coalescent, and then
+		never lose that status."""
 		# DAD: can cache...set entry.coalescent = True, only check LCA if not coalescent.
 		# That is optimization; do not do prematurely... ;)
 		lca = self.lastCommonAncestor()
 		return entry == lca
-	
-	def old_stuff(self, entry):
-		pid = -1
-		if not entry.parent is None:
-			pid = entry.parent.id
-		print "check coal for id={} p={} c={} (n={})".format(entry.id, pid, entry.coalescent, self.count(entry))
-		res = entry.coalescent
-		if not entry.coalescent:
-			# Check for coalescence. If parent is coalescent, and has a count of 1,
-			# then we are coalescent as well.
-			parent = entry.parent
-			if not parent is None and parent.coalescent:
-				if self.count(parent) == 1:
-					entry.coalescent = True
-					res = True
-		return res
-	
 	
 	def lastCommonAncestor(self):
 		"""Get the last common ancestor of the population."""
@@ -414,10 +405,11 @@ class WrightFisherPopulation(Population):
 
 	def erase(self):
 		"""Get rid of all information in the population."""
-		self._members = []
+		self._members = SampleCounter()
 		self.genebank.erase()
 	
 	def choice(self):
+		"""Choose a random member of the population."""
 		return self.genebank[self._members.choice()]
 	
 	def inject(self, organism):
