@@ -65,6 +65,24 @@ class SimpleMutator(Mutator):
 				mutations.append(MutationInfo(l, from_base, mut_sequence[l]))
 		return ''.join(mut_sequence), mutations
 
+class PoissonMutator(Mutator):
+	"""Unbiased nucleotide mutations."""
+	def __init__(self, per_site_mutation_rate, alphabet = 'ATGC'):
+		self.per_site_mutation_rate = per_site_mutation_rate
+		self.alphabet = alphabet
+		self.mut_choices = dict([(x,alphabet.replace(x,'')) for x in alphabet])
+
+	def mutate(self, sequence):
+		"""Mutate the sequence with the specified per-site mutation rate."""
+		mut_sequence = [x for x in sequence]
+		mutations = []
+		for l in range(len(mut_sequence)):
+			if random.random() < self.per_site_mutation_rate:
+				from_base = mut_sequence[l]
+				mut_sequence[l] = random.choice(self.mut_choices[mut_sequence[l]])
+				mutations.append(MutationInfo(l, from_base, mut_sequence[l]))
+		return ''.join(mut_sequence), mutations
+
 class EvolvableSequence(Evolvable):
 	"""Base implementation of a sequence class that can evolve."""
 	def __init__(self, sequence):
@@ -285,6 +303,7 @@ class WrightFisherPopulation(Population):
 		self._members[entry.id] -= n
 	
 	def copyOffspring(self, organism_entry, n=1):
+		"""Creates offspring entry and add to GeneBank. Does not add to population."""
 		self.genebank.addEntry(organism_entry, n)
 		return organism_entry
 
@@ -298,8 +317,6 @@ class WrightFisherPopulation(Population):
 			if spawnres.mutated:
 				# Create an entry for the GeneBank
 				new_entry = self.genebank.createEntry(spawnres.offspring, organism_entry, spawnres.offspring.fitness, self.generation_count)
-		# DAD: this is wrong. Parent should be the parental genotype.
-		#new_entry.parent = organism_entry
 		# Add to the GeneBank
 		self.genebank.addEntry(new_entry)
 		return new_entry
