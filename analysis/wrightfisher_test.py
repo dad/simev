@@ -270,7 +270,7 @@ class test013(unittest.TestCase):
 	
 class test014(unittest.TestCase):
 	"""SampleCounter"""
-	def test_sample_counter(self):
+	def test_sample_average(self):
 		sc = wf.SampleCounter()
 		x = string.letters
 		sumsq = 0

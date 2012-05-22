@@ -128,12 +128,12 @@ class GeneBankEntry:
 		self._coalescent = False
 		self._id = None
 
-	def addReference(self):
-		self._refcount += 1
+	def addReference(self, n=1):
+		self._refcount += n
 		return self._refcount
 
-	def removeReference(self):
-		self._refcount -= 1
+	def removeReference(self, n=1):
+		self._refcount -= n
 		return self._refcount
 	
 	@property
@@ -186,12 +186,12 @@ class GeneBank:
 	def __getitem__(self, id):
 		return self.table[id]
 		
-	def addEntry(self, entry):
-		entry.addReference()
+	def addEntry(self, entry, n=1):
+		entry.addReference(n)
 
-	def removeEntry(self, entry):
+	def removeEntry(self, entry, n=1):
 		if not entry is None:
-			if entry.removeReference()==0:
+			if entry.removeReference(n)==0:
 				# Refcount is zero: time to remove the organism from our world.
 				del self.table[entry.id]
 				self.removeEntry(entry.parent)
@@ -276,15 +276,19 @@ class WrightFisherPopulation(Population):
 		# The number of generations since the beginning of the simulation.
 		self.generation_count = 0
 
-	def addMember(self, entry):
+	def addMember(self, entry, n=1):
 		# Add to the population. Does not enforce population size.
-		self._members[entry.id] += 1
+		self._members[entry.id] += n
 
-	def removeMember(self, entry):
+	def removeMember(self, entry, n=1):
 		# Remove from the population. Does not enforce population size.
-		self._members[entry.id] -= 1
+		self._members[entry.id] -= n
+	
+	def copyOffspring(self, organism_entry, n=1):
+		self.genebank.addEntry(organism_entry, n)
+		return organism_entry
 
-	def createOffspring(self, organism_entry, mutate=True):
+	def createOffspring(self, organism_entry, mutate=True, n=1):
 		"""Creates offspring entry and add to GeneBank. Does not add to population."""
 		# Begin assuming no mutation will occur
 		new_entry = organism_entry
@@ -310,9 +314,9 @@ class WrightFisherPopulation(Population):
 		# Now create the population individuals, who will have parent_entry as their parent
 		offspring = self.genebank.createEntry(organism, parent_entry, organism.fitness, self.generation_count)
 		# All new population
-		for i in range(self.population_size):
-			offs = self.createOffspring(offspring, mutate=False)
-			self.addMember(offs)
+		#for i in range(self.population_size):
+		offs = self.copyOffspring(offspring, n=self.population_size)
+		self.addMember(offs, n=self.population_size)
 		# Remove the parent -- it's no longer in the population
 		self.genebank.removeEntry(parent_entry)
 		return parent_entry
