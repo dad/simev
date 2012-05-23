@@ -1,4 +1,5 @@
 import math, string, random, collections
+from numpy.random import binomial
 
 class NotImplementedException(Exception):
 	def __init__(self):
@@ -46,8 +47,26 @@ class Mutator:
 	def mutate(self, sequence):
 		raise NotImplementedException, "Must override"
 
+class NaiveMutator(Mutator):
+	"""Unbiased nucleotide mutations, no shortcuts at all."""
+	def __init__(self, per_site_mutation_rate, alphabet = 'ATGC'):
+		self.per_site_mutation_rate = per_site_mutation_rate
+		self.alphabet = alphabet
+		self.mut_choices = dict([(x,alphabet.replace(x,'')) for x in alphabet])
+
+	def mutate(self, sequence):
+		"""Mutate the sequence with the specified per-site mutation rate."""
+		mut_sequence = [x for x in sequence]
+		mutations = []
+		for l in range(len(mut_sequence)):
+			if random.random() < self.per_site_mutation_rate:
+				from_base = mut_sequence[l]
+				mut_sequence[l] = random.choice(self.mut_choices[mut_sequence[l]])
+				mutations.append(MutationInfo(l, from_base, mut_sequence[l]))
+		return ''.join(mut_sequence), mutations
+
 class SimpleMutator(Mutator):
-	"""Unbiased nucleotide mutations."""
+	"""Unbiased nucleotide mutations. Uses a binomial shortcut to generate mutations."""
 	def __init__(self, per_site_mutation_rate, alphabet = 'ATGC'):
 		self.per_site_mutation_rate = per_site_mutation_rate
 		self.alphabet = alphabet
@@ -55,32 +74,17 @@ class SimpleMutator(Mutator):
 
 	def mutate(self, sequence):
 		"""Mutate the sequence with the specified per-site mutation rate."""
-		mut_sequence = [x for x in sequence]
+		n_mutations = binomial(len(sequence), self.per_site_mutation_rate)
 		mutations = []
-		for l in range(len(mut_sequence)):
-			if random.random() < self.per_site_mutation_rate:
+		res = sequence
+		if n_mutations > 0:
+			mut_sequence = [x for x in sequence]
+			for l in random.sample(range(len(sequence)),n_mutations):
 				from_base = mut_sequence[l]
 				mut_sequence[l] = random.choice(self.mut_choices[mut_sequence[l]])
 				mutations.append(MutationInfo(l, from_base, mut_sequence[l]))
-		return ''.join(mut_sequence), mutations
-
-class PoissonMutator(Mutator):
-	"""Unbiased nucleotide mutations."""
-	def __init__(self, per_site_mutation_rate, alphabet = 'ATGC'):
-		self.per_site_mutation_rate = per_site_mutation_rate
-		self.alphabet = alphabet
-		self.mut_choices = dict([(x,alphabet.replace(x,'')) for x in alphabet])
-
-	def mutate(self, sequence):
-		"""Mutate the sequence with the specified per-site mutation rate."""
-		mut_sequence = [x for x in sequence]
-		mutations = []
-		for l in range(len(mut_sequence)):
-			if random.random() < self.per_site_mutation_rate:
-				from_base = mut_sequence[l]
-				mut_sequence[l] = random.choice(self.mut_choices[mut_sequence[l]])
-				mutations.append(MutationInfo(l, from_base, mut_sequence[l]))
-		return ''.join(mut_sequence), mutations
+			res = ''.join(mut_sequence)
+		return res, mutations
 
 class EvolvableSequence(Evolvable):
 	"""Base implementation of a sequence class that can evolve."""
