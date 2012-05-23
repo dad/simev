@@ -78,11 +78,10 @@ class test003(unittest.TestCase):
 		p = wf.WrightFisherPopulation(10, wf.SimpleMutator(0.01,alphabet), wf.SequenceFitnessEvaluator())
 		p.populate(wf.EvolvableSequence(randomSequence(20,alphabet)))
 		p.evolve(1000)
-		#for m in p.members:
-		#	print m
+		self.assertTrue(True)
 
 class test004(unittest.TestCase):
-	def test_run(self):
+	def test_zero_mutation(self):
 		alphabet = 'ATGC'
 		e = wf.EvolvableSequence(randomSequence(100,alphabet))
 		# Zero mutation rate copy
@@ -91,8 +90,8 @@ class test004(unittest.TestCase):
 		self.assertTrue(e == off)
 
 class test005(unittest.TestCase):
-	"""Tracking frequency"""
-	def test_run(self):
+	"""Dominant organism"""
+	def test_dominant_organism(self):
 		alphabet = 'ATGC'
 		pop = wf.WrightFisherPopulation(100,wf.SimpleMutator(0.0001,alphabet), wf.SequenceFitnessEvaluator())
 		seq = wf.EvolvableSequence(randomSequence(100,alphabet))
@@ -107,7 +106,7 @@ class test005(unittest.TestCase):
 
 class test006(unittest.TestCase):
 	"""Histogram"""
-	def test_run(self):
+	def test_histogram(self):
 		alphabet = 'ATGC'
 		n = 1000
 		pop = wf.WrightFisherPopulation(n,wf.SimpleMutator(0.0001,alphabet), wf.SequenceFitnessEvaluator())
@@ -122,7 +121,7 @@ class test006(unittest.TestCase):
 
 class test007(unittest.TestCase):
 	"""Mutation info"""
-	def test_run(self):
+	def test_mutation_info(self):
 		alphabet = 'ATGC'
 		mut = wf.SimpleMutator(0.1,alphabet)
 		seq = wf.EvolvableSequence(randomSequence(50,alphabet))
@@ -136,7 +135,7 @@ class test007(unittest.TestCase):
 		
 class test008(unittest.TestCase):
 	"""Assured fixation"""
-	def test_run(self):
+	def test_assured_fixation(self):
 		alphabet = 'ATGC'
 		dx = 0.1
 		Ne = 20
@@ -165,7 +164,7 @@ class test008(unittest.TestCase):
 		
 class test009(unittest.TestCase):
 	"""Predicting probability of fixation"""
-	def test_run(self):
+	def test_prob_of_fixation(self):
 		alphabet = 'ATGC'
 		dx = 0.1
 		Ne = 1000
@@ -173,10 +172,10 @@ class test009(unittest.TestCase):
 		predicted_fixation_probability = wf.probabilityOfFixation(Ne, dx)
 		n_fixations = 0
 		n_total = 0
-		n_trials = 5*int(1/dx)
+		n_trials = 3*int(1/dx)
 		random.seed(111)
-		print "Aborting because this test takes a long time -- please do run occasionally!"
-		return
+		#print "Aborting because this test takes a long time -- please do run occasionally!"
+		#return
 		for i in range(n_trials):
 			pop = wf.WrightFisherPopulation(Ne,wf.SimpleMutator(mu,alphabet), wf.SequenceFitnessEvaluator())
 			seq = wf.EvolvableSequence(randomSequence(100,alphabet))
@@ -257,7 +256,7 @@ class test013(unittest.TestCase):
 		n_gens = 100
 		random.seed(3)
 		seq = wf.EvolvableSequence(randomSequence(100,alphabet))
-		for i in range(4):
+		for i in range(5):
 			tstart = time.time()
 			Ne = 10**i
 			pop = wf.WrightFisherPopulation(Ne,wf.SimpleMutator(mu,alphabet), wf.SequenceFitnessEvaluator())
@@ -302,7 +301,7 @@ class test015(unittest.TestCase):
 
 class test016(unittest.TestCase):
 	"""reference counting check"""
-	def test_average_fitness(self):
+	def test_refcount(self):
 		alphabet = 'ATGC'
 		mu = 0.0001
 		base_fitness = 1.0
