@@ -459,7 +459,8 @@ class WrightFisherPopulation(Population):
 
 	def histogram(self):
 		"""Return a sorted count of the number of each type of organism in the population"""
-		return [x[1] for x in self._members.most_common()]
+		#return [x[1] for x in self._members.most_common()]
+		return self._members.most_common()
 
 	def dominantOrganism(self):
 		id = self._members.most_common(1)[0][0]

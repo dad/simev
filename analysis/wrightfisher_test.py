@@ -1,5 +1,5 @@
 import sys, os, math, string, random, unittest, time
-import stats
+import stats, numpy
 import wrightfisher as wf
 
 class TraitOrganism(wf.Evolvable):
@@ -114,11 +114,11 @@ class test006(unittest.TestCase):
 		seq = wf.EvolvableSequence(randomSequence(90,alphabet))
 		pop.populate(seq)
 		h = pop.histogram()
-		self.assertTrue(h[0] == n)
+		self.assertTrue(h[0][1] == n)
 		for i in range(10):
 			pop.evolve(1)
-			h = pop.histogram()
-			self.assertTrue(sum(h) == n)
+			h = dict(pop.histogram())
+			self.assertTrue(sum(h.values()) == n)
 
 class test007(unittest.TestCase):
 	"""Mutation info"""
@@ -144,6 +144,7 @@ class test008(unittest.TestCase):
 		pop = wf.WrightFisherPopulation(Ne,wf.SimpleMutator(mu,alphabet))
 		seq = wf.EvolvableSequence(randomSequence(100,alphabet))
 		random.seed(3)
+		numpy.random.seed(11)
 		# No fitness
 		seq.fitness = 0.0
 		parent = pop.populate(seq)
