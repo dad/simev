@@ -88,9 +88,9 @@ class SimpleMutator(Mutator):
 
 class EvolvableSequence(Evolvable):
 	"""Base implementation of a sequence class that can evolve."""
-	def __init__(self, sequence):
+	def __init__(self, sequence, fit=1.0):
 		self._sequence = sequence
-		self._fitness = 1.0
+		self._fitness = fit
 
 	def copy(self):
 		e = EvolvableSequence(self.sequence)
@@ -467,11 +467,7 @@ class WrightFisherPopulation(Population):
 		return self.genebank[id]
 		
 	def averageFitness(self):
-		total_fitness = 0.0
-		for m in self._members:
-			m.cache_fitness = m.organism.fitness()
-			total_fitness += m.cache_fitness
-		return total_fitness/self.size()
+		return self._members.average(fxn=lambda id: self.genebank[id].fitness)
 	
 	## Properties
 	@property

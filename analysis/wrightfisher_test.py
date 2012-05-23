@@ -175,7 +175,7 @@ class test009(unittest.TestCase):
 		n_total = 0
 		n_trials = 5*int(1/dx)
 		random.seed(111)
-		print "Aborting because this test takes too long"
+		print "Aborting because this test takes a long time -- please do run occasionally!"
 		return
 		for i in range(n_trials):
 			pop = wf.WrightFisherPopulation(Ne,wf.SimpleMutator(mu,alphabet))
@@ -191,16 +191,13 @@ class test009(unittest.TestCase):
 			n_total += 1
 			if res.fixed:
 				n_fixations += 1
-			#print n_total, n_trials, n_fixations, res.fixed, res.time, n_fixations/float(n_total), predicted_fixation_probability
-		# DAD: mean is 
 		est_prob = n_fixations/float(n_total)
 		p = predicted_fixation_probability
 		exp_fixations = n_trials*p
 		sd = math.sqrt(n_trials*p*(1.0-p))
-		# 
+		# Confirm that number of fixations is within 2 SD's of expectation
 		self.assertTrue(n_fixations <= (exp_fixations+2*sd))
 		self.assertTrue(n_fixations >= (exp_fixations-2*sd))
-		#print n_fixations, n_total, n_fixations/float(n_total), predicted_fixation_probability
 			
 class test010(unittest.TestCase):
 	"""LCA"""
@@ -283,6 +280,25 @@ class test014(unittest.TestCase):
 		#print sc
 		avg = sc.average(lambda y: x.index(y))
 		self.assertTrue(avg==sumsq/float(ct))
+
+class test015(unittest.TestCase):
+	"""average fitness"""
+	def test_average_fitness(self):
+		alphabet = 'ATGC'
+		dx = 0.1
+		mu = 0.0001
+		base_fitness = 0.01
+		n_gens = 100
+		random.seed(3)
+		seq = wf.EvolvableSequence(randomSequence(100,alphabet), base_fitness)
+		tstart = time.time()
+		Ne = 100
+		pop = wf.WrightFisherPopulation(Ne,wf.SimpleMutator(mu,alphabet))
+		pop.populate(seq)
+		self.assertTrue(pop.averageFitness()==base_fitness)
+		mutseq = wf.EvolvableSequence(randomSequence(100,alphabet), 1.0)
+		pop.inject(mutseq)
+		self.assertTrue(pop.averageFitness()==((Ne-1)*base_fitness + 1.0)/Ne)
 
 if __name__=="__main__":
 	unittest.main(verbosity=2)
