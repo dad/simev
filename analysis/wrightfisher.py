@@ -86,6 +86,21 @@ class SimpleMutator(Mutator):
 			res = ''.join(mut_sequence)
 		return res, mutations
 
+class FitnessEvaluator:
+	"""Interface for fitness evaluation."""
+	def fitness(self, organism, population):
+		raise NotImplementedException, "Must override"
+
+class NeutralFitnessEvaluator(FitnessEvaluator):
+	"""All fitnesses = 1.0."""
+	def fitness(self, organism, population):
+		return 1.0
+
+class SequenceFitnessEvaluator(FitnessEvaluator):
+	"""Reports the .fitness attribute of the given organism"""
+	def fitness(self, organism, population):
+		return organism.fitness
+
 class EvolvableSequence(Evolvable):
 	"""Base implementation of a sequence class that can evolve."""
 	def __init__(self, sequence, fit=1.0):
@@ -284,14 +299,16 @@ class WrightFisherPopulation(Population):
 	
 	To track genotypes
 	"""
-	def __init__(self, population_size, mutator):
+	def __init__(self, population_size, mutator, fitness_evaluator):
 		self.population_size = population_size
 		# List of members of the population. These are GeneBankEntry objects, which wrap organisms to allow reference-counting.
 		self._members = SampleCounter()
 		# A buffer for building subsequent generations of the population.
 		self._members_buffer = SampleCounter()
-		# Class supporting the .mutate() method.
+		# Class supporting the .mutate(organism) method.
 		self.mutator = mutator
+		# Class supporting the .fitness(organism, population) method.
+		self.fitness_evaluator = fitness_evaluator
 		# The gene bank: the set of organisms along the line of descent.
 		self.genebank = GeneBank()
 		# The number of generations since the beginning of the simulation.
@@ -319,7 +336,7 @@ class WrightFisherPopulation(Population):
 			spawnres = organism_entry.organism.spawn(self.mutator)
 			if spawnres.mutated:
 				# Create an entry for the GeneBank
-				new_entry = self.genebank.createEntry(spawnres.offspring, organism_entry, spawnres.offspring.fitness, self.generation_count)
+				new_entry = self.genebank.createEntry(spawnres.offspring, organism_entry, self.fitness_evaluator.fitness(spawnres.offspring,self), self.generation_count)
 		# Add to the GeneBank
 		self.genebank.addEntry(new_entry)
 		return new_entry
@@ -328,11 +345,11 @@ class WrightFisherPopulation(Population):
 		"""Add population_size copies of the specified organism"""
 		# Make a parent for the whole population
 		parent = organism
-		parent_entry = self.genebank.createEntry(parent, None, parent.fitness, self.generation_count)
+		parent_entry = self.genebank.createEntry(parent, None, self.fitness_evaluator.fitness(parent,self), self.generation_count)
 		parent_entry.coalescent = True
 		self.genebank.addEntry(parent_entry)
 		# Now create the population individuals, who will have parent_entry as their parent
-		offspring = self.genebank.createEntry(organism, parent_entry, organism.fitness, self.generation_count)
+		offspring = self.genebank.createEntry(organism, parent_entry, self.fitness_evaluator.fitness(organism,self), self.generation_count)
 		# All new population
 		#for i in range(self.population_size):
 		offs = self.copyOffspring(offspring, n=self.population_size)
@@ -349,7 +366,7 @@ class WrightFisherPopulation(Population):
 		for (mk, m_count) in self._members.items():
 			m = self.genebank[mk]
 			# Cache the fitness...DAD we may need a FitnessEvaluator instance in here.
-			m.cache_fitness = m.organism.fitness
+			m.cache_fitness = self.fitness_evaluator.fitness(m.organism, self)
 			total_fitness += m.cache_fitness*m_count
 			sorted_entries.append((m.cache_fitness*m_count, m))
 		assert total_fitness > 0.0, "Total fitness = {} <= 0.0, aborting".format(total_fitness)
@@ -436,10 +453,13 @@ class WrightFisherPopulation(Population):
 		"""Choose a random member of the population."""
 		return self.genebank[self._members.choice()]
 	
+	def fitness(self, entry):
+		return self.fitness_evaluator(entry.organism, self)
+	
 	def inject(self, organism):
 		"""Put the supplied organism into a randomly chosen spot in the population as a spontaneous mutant."""
 		slot_entry = self.choice()
-		new_entry = self.genebank.createEntry(organism, slot_entry.parent, organism.fitness, self.generation_count)
+		new_entry = self.genebank.createEntry(organism, slot_entry.parent, self.fitness_evaluator.fitness(organism,self), self.generation_count)
 		self.genebank.addEntry(new_entry)
 		# Add injected organism as if it were a spontaneous mutant
 		#new_entry.parent = slot_entry.parent

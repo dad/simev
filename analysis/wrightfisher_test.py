@@ -34,7 +34,7 @@ class test001(unittest.TestCase):
 	def test_members(self):
 		alphabet='ATGC'
 		N = random.randint(10,100)
-		pop = wf.WrightFisherPopulation(N, wf.SimpleMutator(0.01,alphabet))
+		pop = wf.WrightFisherPopulation(N, wf.SimpleMutator(0.01,alphabet), wf.SequenceFitnessEvaluator())
 		pop.populate(TraitOrganism())
 		for m in pop.members:
 			self.assertTrue(pop.count(m)==N)
@@ -64,7 +64,7 @@ class test002(unittest.TestCase):
 	"""basic run"""
 	def test_basic_run(self):
 		alphabet='ATGC'
-		p = wf.WrightFisherPopulation(10, wf.SimpleMutator(0.01,alphabet))
+		p = wf.WrightFisherPopulation(10, wf.SimpleMutator(0.01,alphabet), wf.SequenceFitnessEvaluator())
 		p.populate(TraitOrganism())
 		p.evolve(1000)
 		#print len(p.members)
@@ -75,7 +75,7 @@ class test003(unittest.TestCase):
 	"""Sequence"""
 	def test_run(self):
 		alphabet = 'ATGC'
-		p = wf.WrightFisherPopulation(10, wf.SimpleMutator(0.01,alphabet))
+		p = wf.WrightFisherPopulation(10, wf.SimpleMutator(0.01,alphabet), wf.SequenceFitnessEvaluator())
 		p.populate(wf.EvolvableSequence(randomSequence(20,alphabet)))
 		p.evolve(1000)
 		#for m in p.members:
@@ -94,7 +94,7 @@ class test005(unittest.TestCase):
 	"""Tracking frequency"""
 	def test_run(self):
 		alphabet = 'ATGC'
-		pop = wf.WrightFisherPopulation(100,wf.SimpleMutator(0.0001,alphabet))
+		pop = wf.WrightFisherPopulation(100,wf.SimpleMutator(0.0001,alphabet), wf.SequenceFitnessEvaluator())
 		seq = wf.EvolvableSequence(randomSequence(100,alphabet))
 		pop.populate(seq)
 		pop.evolve(100)
@@ -110,7 +110,7 @@ class test006(unittest.TestCase):
 	def test_run(self):
 		alphabet = 'ATGC'
 		n = 1000
-		pop = wf.WrightFisherPopulation(n,wf.SimpleMutator(0.0001,alphabet))
+		pop = wf.WrightFisherPopulation(n,wf.SimpleMutator(0.0001,alphabet), wf.SequenceFitnessEvaluator())
 		seq = wf.EvolvableSequence(randomSequence(90,alphabet))
 		pop.populate(seq)
 		h = pop.histogram()
@@ -141,7 +141,7 @@ class test008(unittest.TestCase):
 		dx = 0.1
 		Ne = 20
 		mu = 0.001
-		pop = wf.WrightFisherPopulation(Ne,wf.SimpleMutator(mu,alphabet))
+		pop = wf.WrightFisherPopulation(Ne,wf.SimpleMutator(mu,alphabet), wf.SequenceFitnessEvaluator())
 		seq = wf.EvolvableSequence(randomSequence(100,alphabet))
 		random.seed(3)
 		numpy.random.seed(11)
@@ -178,7 +178,7 @@ class test009(unittest.TestCase):
 		print "Aborting because this test takes a long time -- please do run occasionally!"
 		return
 		for i in range(n_trials):
-			pop = wf.WrightFisherPopulation(Ne,wf.SimpleMutator(mu,alphabet))
+			pop = wf.WrightFisherPopulation(Ne,wf.SimpleMutator(mu,alphabet), wf.SequenceFitnessEvaluator())
 			seq = wf.EvolvableSequence(randomSequence(100,alphabet))
 			seq.fitness = 1.0
 			parent = pop.populate(seq)
@@ -203,7 +203,7 @@ class test010(unittest.TestCase):
 	"""LCA"""
 	def test_lca(self):
 		alphabet = 'ATGC'
-		pop = wf.WrightFisherPopulation(100,wf.SimpleMutator(0.0001,alphabet))
+		pop = wf.WrightFisherPopulation(100,wf.SimpleMutator(0.0001,alphabet), wf.SequenceFitnessEvaluator())
 		pop.populate(wf.EvolvableSequence(randomSequence(100,alphabet)))
 		for n in range(10):
 			pop.evolve(1)
@@ -215,7 +215,7 @@ class test011(unittest.TestCase):
 	"""pop size"""
 	def test_pop_size(self):
 		alphabet = 'ATGC'
-		pop = wf.WrightFisherPopulation(100,wf.SimpleMutator(0.0001,alphabet))
+		pop = wf.WrightFisherPopulation(100,wf.SimpleMutator(0.0001,alphabet), wf.SequenceFitnessEvaluator())
 		pop.populate(wf.EvolvableSequence(randomSequence(100,alphabet)))
 		for n in range(10):
 			pop.evolve(1)
@@ -228,7 +228,7 @@ class test012(unittest.TestCase):
 		dx = 0.1
 		Ne = 20
 		mu = 0.0001
-		pop = wf.WrightFisherPopulation(Ne,wf.SimpleMutator(mu,alphabet))
+		pop = wf.WrightFisherPopulation(Ne,wf.SimpleMutator(mu,alphabet), wf.SequenceFitnessEvaluator())
 		seq = wf.EvolvableSequence(randomSequence(100,alphabet))
 		random.seed(3)
 		# No fitness
@@ -253,18 +253,18 @@ class test013(unittest.TestCase):
 	def test_large_pop(self):
 		alphabet = 'ATGC'
 		dx = 0.1
-		mu = 0.0001
+		mu = 0.00001
 		n_gens = 100
 		random.seed(3)
 		seq = wf.EvolvableSequence(randomSequence(100,alphabet))
 		for i in range(4):
 			tstart = time.time()
 			Ne = 10**i
-			pop = wf.WrightFisherPopulation(Ne,wf.SimpleMutator(mu,alphabet))
+			pop = wf.WrightFisherPopulation(Ne,wf.SimpleMutator(mu,alphabet), wf.SequenceFitnessEvaluator())
 			pop.populate(seq)
 			pop.evolve(n_gens)
 			tend = time.time()
-			print "# evolved {} generations at Ne={} (t={}ms)".format(n_gens, Ne, (tend-tstart)*1000)
+			print "# evolved {} generations at Ne={} (t={} sec)".format(n_gens, Ne, round(tend-tstart,3))
 	
 class test014(unittest.TestCase):
 	"""SampleCounter"""
@@ -293,12 +293,35 @@ class test015(unittest.TestCase):
 		seq = wf.EvolvableSequence(randomSequence(100,alphabet), base_fitness)
 		tstart = time.time()
 		Ne = 100
-		pop = wf.WrightFisherPopulation(Ne,wf.SimpleMutator(mu,alphabet))
+		pop = wf.WrightFisherPopulation(Ne,wf.SimpleMutator(mu,alphabet), wf.SequenceFitnessEvaluator())
 		pop.populate(seq)
 		self.assertTrue(pop.averageFitness()==base_fitness)
 		mutseq = wf.EvolvableSequence(randomSequence(100,alphabet), 1.0)
 		pop.inject(mutseq)
 		self.assertTrue(pop.averageFitness()==((Ne-1)*base_fitness + 1.0)/Ne)
+
+class test016(unittest.TestCase):
+	"""reference counting check"""
+	def test_average_fitness(self):
+		alphabet = 'ATGC'
+		mu = 0.0001
+		base_fitness = 1.0
+		n_gens = 100
+		random.seed(3)
+		tstart = time.time()
+		Ne = 100
+		pop = wf.WrightFisherPopulation(Ne, wf.SimpleMutator(mu,alphabet), wf.SequenceFitnessEvaluator())
+		seq = wf.EvolvableSequence(randomSequence(100,alphabet), base_fitness)
+		# Zero-fitness mutant
+		mutseq = wf.EvolvableSequence(randomSequence(100,alphabet), 0.0)
+		pop.populate(seq)
+		mutentry = pop.inject(mutseq)
+		# We put one in: should be one.
+		self.assertTrue(mutentry.count==1)
+		pop.evolve(1)
+		# Evolution should result in immediate loss of this mutant from the population and, thus, the genebank.
+		self.assertTrue(mutentry.count==0)
+		self.assertTrue(pop.genebank.getEntry(mutentry.id)==None)
 
 if __name__=="__main__":
 	unittest.main(verbosity=2)
