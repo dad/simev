@@ -8,11 +8,11 @@ if __name__=="__main__":
 	alphabet = 'ATGC'
 	dx = 0.1
 	mu = 0.000001
-	n_gens = 100000
+	n_gens = 1000
 	Ne = 1000
 	random.seed(3)
 	seq = wf.EvolvableSequence(randomSequence(100,alphabet))
-	pop = wf.WrightFisherPopulation(Ne,wf.SimpleMutator(mu,alphabet))
+	pop = wf.WrightFisherPopulation(Ne, wf.SimpleMutator(mu,alphabet), wf.SequenceFitnessEvaluator())
 	pop.populate(seq)
 	pop.evolve(n_gens)
 	#for i in range(n_gens):
