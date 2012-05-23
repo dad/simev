@@ -1,9 +1,8 @@
-import sys, os, math, string, random, collections, unittest
-import stats
+import math, string, random, collections
 
 class NotImplementedException(Exception):
 	def __init__(self):
-		myvar = 1
+		pass
 		
 def probabilityOfFixation(Ne, s):
 	return (1 - math.exp(-2*s))/(1 - math.exp(-2*Ne*s))
