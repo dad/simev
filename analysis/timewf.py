@@ -14,6 +14,7 @@ if __name__=="__main__":
 	seq = wf.EvolvableSequence(randomSequence(100,alphabet))
 	pop = wf.WrightFisherPopulation(Ne,wf.SimpleMutator(mu,alphabet))
 	pop.populate(seq)
-	for i in range(n_gens):
-		pop.evolve(1)
-		print pop.histogram()
+	pop.evolve(n_gens)
+	#for i in range(n_gens):
+	#	pop.evolve(1)
+	#	print pop.histogram()
