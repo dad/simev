@@ -292,7 +292,7 @@ class test015(unittest.TestCase):
 		seq = wf.EvolvableSequence(randomSequence(100,alphabet), base_fitness)
 		tstart = time.time()
 		Ne = 100
-		pop = wf.WrightFisherPopulation(Ne,wf.SimpleMutator(mu,alphabet), wf.SequenceFitnessEvaluator())
+		pop = wf.WrightFisherPopulation(Ne, wf.SimpleMutator(mu,alphabet), wf.SequenceFitnessEvaluator())
 		pop.populate(seq)
 		self.assertTrue(pop.averageFitness()==base_fitness)
 		mutseq = wf.EvolvableSequence(randomSequence(100,alphabet), 1.0)
