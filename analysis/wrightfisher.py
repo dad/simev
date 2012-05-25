@@ -387,6 +387,9 @@ class WrightFisherPopulation(Population):
 			# Increment generations
 			self.generation_count += 1
 			# Replicate into the new generation
+			# DAD: opportunity to optimize. This is just a multinomial draw to decide parents. Remaining
+			# challenge is the draw of mutants; we would want a createOffspring(parent_entry, n_offspring)
+			# function which could decide how many unmutated sequences there were.
 			for nm in xrange(self.population_size):
 				# Pick parent according to fitness: Wright-Fisher sampling
 				parent_entry = sorted_entries[pickIndexByProbability(cum_probs, random.random())][1]

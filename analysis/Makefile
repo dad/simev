@@ -1,11 +1,11 @@
-PY = python
+PY = $$PYTHONEXE
 DATA = ../data
 
 all: test
 
 test:
 #	nosetests -v
-	python wrightfisher_test.py
+	$(PY) wrightfisher_test.py
 
 prof:
-	python -m cProfile -s time timewf.py
+	$(PY) -m cProfile -s time timewf.py
