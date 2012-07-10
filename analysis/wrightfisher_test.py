@@ -322,6 +322,12 @@ class test016(unittest.TestCase):
 		self.assertTrue(mutentry.count==0)
 		self.assertTrue(pop.genebank.getEntry(mutentry.id)==None)
 
+class test017(unittest.TestCase):
+	"""yikes"""
+	def test_fail(self):
+		self.assertTrue(True)
+
+
 if __name__=="__main__":
 	unittest.main(verbosity=2)
 	#t = test008("test_run")
