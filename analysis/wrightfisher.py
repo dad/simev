@@ -136,6 +136,9 @@ class EvolvableSequence(Evolvable):
 	def key(self):
 		return self._sequence
 
+	def __len__(self):
+		return len(self._sequence)
+
 	def __str__(self):
 		return self._sequence
 
@@ -365,7 +368,7 @@ class WrightFisherPopulation(Population):
 		sorted_entries = []
 		for (mk, m_count) in self._members.items():
 			m = self.genebank[mk]
-			# Cache the fitness...DAD we may need a FitnessEvaluator instance in here.
+			# Cache the fitness
 			m.cache_fitness = self.fitness_evaluator.fitness(m.organism, self)
 			total_fitness += m.cache_fitness*m_count
 			sorted_entries.append((m.cache_fitness*m_count, m))
