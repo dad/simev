@@ -290,14 +290,15 @@ class SampleCounter(collections.Counter):
 
 class WrightFisherPopulation(Population):
 	"""An evolving population.
-	A population consists of N (.population_size) individuals, which are themselves instances of M < N genotypes.
+	A population consists of N (.population_size) individuals, which are themselves instances of M <= N types.
 	Evolution proceeds by Wright-Fisher sampling. In generation t, N offspring individuals are generated. The probability that one
-	individual offspring has, as its parent, an individual in generation t-1 is equal to the fitness of the parent.
+	individual offspring has, as its parent, an individual in generation t-1 is proportional to the fitness of the parent.
 	
 	To accommodate large N, the implementation uses reference counting. If there are n_i
-	instances of genotype i in the population, then the population will store a single instance of i with a count of n_i.
+	instances of type i in the population, then the population will store a single instance of i with a count of n_i.
 	
-	To track genotypes
+	Individuals in the population must implement Evolvable. Mutation and fitness evaluation are abstracted through the
+	Mutator and FitnessEvaluator interfaces.
 	"""
 	def __init__(self, population_size, mutator, fitness_evaluator):
 		self.population_size = population_size
@@ -468,9 +469,8 @@ class WrightFisherPopulation(Population):
 		#new_entry.parent = slot_entry.parent
 		#self.genebank.addEntry(new_entry.parent)
 		self.addMember(new_entry)
-		self.removeMember(slot_entry)
 		# Kill existing organism
-		#self.genebank.removeEntry(slot_entry)
+		self.removeMember(slot_entry)
 		return new_entry
 
 	###########
@@ -512,5 +512,7 @@ class WrightFisherPopulation(Population):
 		return self._members[entry.id]
 		
 	def __str__(self):
+		s = ''
 		for m in self._members:
-			print m
+			s += str(m) + '\n'
+		return s
