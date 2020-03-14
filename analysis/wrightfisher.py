@@ -1,5 +1,14 @@
-import math, string, random, collections
+import math, string, collections
+import scipy as sp
 from numpy.random import binomial
+
+"""
+Goals and design
+
+
+
+
+"""
 
 class NotImplementedException(Exception):
 	def __init__(self):
@@ -23,14 +32,15 @@ class SpawnResult:
 		return len(self.mutations)
 
 class Evolvable:
-	"""An interface for a class that can reproduce with mutation and has a fitness function.""" 
+	"""An interface for a class that can reproduce with mutation and has a fitness function."""
+	@property
 	def fitness(self):
 		"""Provides a measure of reproductive fitness."""
-		raise NotImplementedException, "Must override"
+		raise NotImplementedException("Must override")
 	
 	def spawn(self, mutator):
 		"""Replication with mutation."""
-		raise NotImplementedException, "Must override"
+		raise NotImplementedException("Must override")
 
 
 ## Mutation
@@ -45,7 +55,7 @@ class MutationInfo:
 class Mutator:
 	"""Interface for a class that can mutate a sequence."""
 	def mutate(self, sequence):
-		raise NotImplementedException, "Must override"
+		raise NotImplementedException("Must override")
 
 class NaiveMutator(Mutator):
 	"""Unbiased nucleotide mutations, no shortcuts at all."""
@@ -59,9 +69,9 @@ class NaiveMutator(Mutator):
 		mut_sequence = [x for x in sequence]
 		mutations = []
 		for l in range(len(mut_sequence)):
-			if random.random() < self.per_site_mutation_rate:
+			if sp.random.random() < self.per_site_mutation_rate:
 				from_base = mut_sequence[l]
-				mut_sequence[l] = random.choice(self.mut_choices[mut_sequence[l]])
+				mut_sequence[l] = sp.random.choice(self.mut_choices[mut_sequence[l]])
 				mutations.append(MutationInfo(l, from_base, mut_sequence[l]))
 		return ''.join(mut_sequence), mutations
 
@@ -70,7 +80,7 @@ class SimpleMutator(Mutator):
 	def __init__(self, per_site_mutation_rate, alphabet = 'ATGC'):
 		self.per_site_mutation_rate = per_site_mutation_rate
 		self.alphabet = alphabet
-		self.mut_choices = dict([(x,alphabet.replace(x,'')) for x in alphabet])
+		self.mut_choices = dict([(x,[a for a in alphabet.replace(x,'')]) for x in alphabet])
 
 	def mutate(self, sequence):
 		"""Mutate the sequence with the specified per-site mutation rate."""
@@ -79,9 +89,9 @@ class SimpleMutator(Mutator):
 		res = sequence
 		if n_mutations > 0:
 			mut_sequence = [x for x in sequence]
-			for l in random.sample(range(len(sequence)),n_mutations):
+			for l in sp.random.choice(range(len(sequence)),n_mutations):
 				from_base = mut_sequence[l]
-				mut_sequence[l] = random.choice(self.mut_choices[mut_sequence[l]])
+				mut_sequence[l] = sp.random.choice(self.mut_choices[mut_sequence[l]])
 				mutations.append(MutationInfo(l, from_base, mut_sequence[l]))
 			res = ''.join(mut_sequence)
 		return res, mutations
@@ -89,7 +99,7 @@ class SimpleMutator(Mutator):
 class FitnessEvaluator:
 	"""Interface for fitness evaluation."""
 	def fitness(self, organism, population):
-		raise NotImplementedException, "Must override"
+		raise NotImplementedException("Must override")
 
 class NeutralFitnessEvaluator(FitnessEvaluator):
 	"""All fitnesses = 1.0."""
@@ -254,7 +264,7 @@ class FixationResults:
 class Population:
 	"""An evolving population."""
 	def __init__(self, max_population_size, mutator, fitness_evaluator):
-		raise NotImplementedException, "Must override."
+		raise NotImplementedException("Must override.")
 
 	def evolve(self, num_generations):
 		pass
@@ -268,7 +278,7 @@ class SampleCounter(collections.Counter):
 		"""Choose an element with probability equal to k/n, where k is the element count and n = sum(k)"""
 		n = sum(self.values())
 		ordered = self.most_common()
-		r = random.randint(0,n-1)
+		r = sp.random.randint(0,n)
 		i = 0
 		k = ordered[0][1]
 		while r>k:
@@ -279,7 +289,7 @@ class SampleCounter(collections.Counter):
 	def elements(self):
 		"""Iterate over elements, repeating each according to its frequency"""
 		for (key, count) in self.items():
-			for n in xrange(count):
+			for n in range(count):
 				yield key
 	
 	def average(self, fxn):
@@ -293,9 +303,9 @@ class SampleCounter(collections.Counter):
 
 class WrightFisherPopulation(Population):
 	"""An evolving population.
-	A population consists of N (.population_size) individuals, which are themselves instances of M <= N types.
+	A population consists of N (.population_size) individuals, which are themselves instances of M types.
 	Evolution proceeds by Wright-Fisher sampling. In generation t, N offspring individuals are generated. The probability that one
-	individual offspring has, as its parent, an individual in generation t-1 is proportional to the fitness of the parent.
+	individual offspring has, as its parent, an individual in generation t-1 is proportional to the fitness of that individual.
 	
 	To accommodate large N, the implementation uses reference counting. If there are n_i
 	instances of type i in the population, then the population will store a single instance of i with a count of n_i.
@@ -375,7 +385,7 @@ class WrightFisherPopulation(Population):
 			sorted_entries.append((m.cache_fitness*m_count, m))
 		assert total_fitness > 0.0, "Total fitness = {} <= 0.0, aborting".format(total_fitness)
 		# Create cumulative probabilities
-		sorted_entries.sort(reverse=True)
+		sorted_entries.sort(reverse=True, key=lambda x:x[0])
 		cum_probs = []
 		cum_prob = 0.0
 		for (fit, m) in sorted_entries:
@@ -384,7 +394,7 @@ class WrightFisherPopulation(Population):
 		return cum_probs, sorted_entries
 
 	def evolve(self, num_generations):
-		for n in xrange(num_generations):
+		for n in range(num_generations):
 			# Clear out the buffer
 			self._members_buffer = SampleCounter()
 			cum_probs, sorted_entries = self.makeCumulativeProbabilities()
@@ -394,9 +404,9 @@ class WrightFisherPopulation(Population):
 			# DAD: opportunity to optimize. This is just a multinomial draw to decide parents. Remaining
 			# challenge is the draw of mutants; we would want a createOffspring(parent_entry, n_offspring)
 			# function which could decide how many unmutated sequences there were.
-			for nm in xrange(self.population_size):
+			for nm in range(self.population_size):
 				# Pick parent according to fitness: Wright-Fisher sampling
-				parent_entry = sorted_entries[pickIndexByProbability(cum_probs, random.random())][1]
+				parent_entry = sorted_entries[pickIndexByProbability(cum_probs, sp.random.random())][1]
 				# Reproduce with mutation; add to genebank
 				spawn_entry = self.createOffspring(parent_entry)
 				# Insert offspring into new generation
@@ -441,7 +451,10 @@ class WrightFisherPopulation(Population):
 		gb = self.genebank
 		lineages = [[x.id for x in gb.lineage(gb[k])] for k in ids]
 		s = [set(x) for x in lineages]
-		intersect = reduce(lambda x,y: x.intersection(y), s)
+		#intersect = reduce(lambda x,y: x.intersection(y), s)
+		intersect = s[0]
+		for x in s[1:]: 
+			intersect = intersect.intersection(x)
 		return gb[max(intersect)]
 		while len(ids)>1:
 			#print "lca:", ids
