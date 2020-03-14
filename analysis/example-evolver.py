@@ -12,14 +12,13 @@ class MySequenceFitnessEvaluator(wf.SequenceFitnessEvaluator):
 
 	"""Interface for fitness evaluation."""
 	def fitness(self, organism, population):
-		seq = organism.sequence # Relies on 
+		seq = organism.sequence # We can do this if we're using EvolvableSequences
+		# A simple definition of sequence fitness based on 
 		# Fitness is the fraction of E and K plus some constant small factor
 		# so that sequences without E and K don't simply go extinct
 		epsilon = 0.001
 		fit = (seq.count('E') + seq.count('K') + epsilon)/float(len(seq))
 		return fit
-
-
 
 if __name__=='__main__':
 	parser = argparse.ArgumentParser(description="Example use of Wright-Fisher evolution")
@@ -28,6 +27,7 @@ if __name__=='__main__':
 	parser.add_argument(dest="num_generations", type=int, help="number of generations to simulate")
 	# Optional arguments
 	parser.add_argument("--output-frequency", dest="output_frequency", type=int, default=1, help="frequency of output, in generations")
+	parser.add_argument("--random-seed", dest="random_seed", type=int, default=None, help="seed for random number generator")
 	parser.add_argument("-o", "--out", dest="out_fname", default=None, help="output filename")
 	options = parser.parse_args()
 
@@ -50,25 +50,19 @@ if __name__=='__main__':
 	for (k,v) in optdict.items():
 		data_outs.write("#\t{k}: {v}\n".format(k=k, v=v))
 
-	'''
-	# Read input
-	if not os.path.isfile(options.in_fname):
-		raise IOError("# Error: file {} does not exist".format(options.in_fname))
-	with open(options.in_fname,'r') as inf:
-		# Read a FASTA file?
-		(headers, seqs) = biofile.readFASTA(inf)
-	'''
-
 	def randomSequence(n, alphabet):
+		""" A simple random sequence generator. """
 		indices = range(len(alphabet))
 		return ''.join([alphabet[i] for i in sp.random.choice(indices, size=n, replace=True)])
-
 
 	# Set up parameters of the evolving population
 	alphabet = 'ACDEFGHIKLMNPQRSTVWY'
 	mutation_rate = 0.0001
 	base_fitness = 1.0
-	sp.random.seed(3)
+	# Random seed
+	if not options.random_seed is None:
+		sp.random.seed(options.random_seed)
+	
 	seq = wf.EvolvableSequence(randomSequence(50,alphabet), base_fitness)
 	tstart = time.time()
 	mutator = wf.SimpleMutator(mutation_rate,alphabet)

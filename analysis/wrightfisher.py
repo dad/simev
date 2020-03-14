@@ -3,8 +3,20 @@ import scipy as sp
 from numpy.random import binomial
 
 """
-Goals and design
+Goals and design:
+	- Evolve an arbitrarily sized population using Wright-Fisher sampling
+	- Allow querying of population parameters during evolution (e.g. generation time, average fitness, last common ancestor)
+	- Provide a simple framework for creating custom fitness functions
 
+Minimal example:
+
+	import wrightfisher as wf
+
+	alphabet = 'ATGC'
+	population_size = 100
+	pop = wf.WrightFisherPopulation(population_size, wf.SimpleMutator(per_base_mutation_rate,alphabet), wf.SequenceFitnessEvaluator())
+	pop.populate(wf.EvolvableSequence('ATGCCATGGGAACCTACACACGG'))
+	pop.evolve(1000)
 
 
 
