@@ -15,10 +15,19 @@ Minimal example:
 	alphabet = 'ATGC'
 	population_size = 100
 	pop = wf.WrightFisherPopulation(population_size, wf.SimpleMutator(per_base_mutation_rate,alphabet), wf.SequenceFitnessEvaluator())
+	# Initialize ("populate") the population
 	pop.populate(wf.EvolvableSequence('ATGCCATGGGAACCTACACACGG'))
+	# Evolve for 1000 generations
 	pop.evolve(1000)
 
-
+	# Do some querying
+	# Extract the average fitness 
+	avg_fitness = pop.averageFitness()
+	# Extract last common ancestor of the current population
+	# First extract the GeneBank entry
+	lca_entry = pop.lastCommonAncestor()
+	# Then retrieve the organism and its sequence
+	lca_sequence = lca_entry.organism.sequence
 
 """
 

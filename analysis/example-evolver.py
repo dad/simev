@@ -5,15 +5,20 @@ import scipy as sp
 import util
 import wrightfisher as wf
 
+# A more detailed example of how the Wright-Fisher simulation can be used
+# Run with:
+# 	python3 example-evolver.py --help
+# 	python3 example-evolver.py 100 10000 --output-frequency 10
+
+
 
 class MySequenceFitnessEvaluator(wf.SequenceFitnessEvaluator):
-	def __init__(self):
-		pass
-
-	"""Interface for fitness evaluation."""
+	"""A simple example of how to create a custom fitness function for evolving organisms which have a sequence."""
 	def fitness(self, organism, population):
 		seq = organism.sequence # We can do this if we're using EvolvableSequences
-		# A simple definition of sequence fitness based on 
+		# A simple definition of sequence fitness based on simple sequence properties.
+		# This fitness definition will lead to hill-climbing toward sequences consisting of all E and K.
+		# 
 		# Fitness is the fraction of E and K plus some constant small factor
 		# so that sequences without E and K don't simply go extinct
 		epsilon = 0.001
@@ -62,8 +67,9 @@ if __name__=='__main__':
 	# Random seed
 	if not options.random_seed is None:
 		sp.random.seed(options.random_seed)
-	
+
 	seq = wf.EvolvableSequence(randomSequence(50,alphabet), base_fitness)
+	# Start recording the time
 	tstart = time.time()
 	mutator = wf.SimpleMutator(mutation_rate,alphabet)
 	fitness_evaluator = MySequenceFitnessEvaluator()
@@ -73,6 +79,7 @@ if __name__=='__main__':
 	pop.populate(seq)
 
 	# Write output
+	# This uses the util.DelimitedOutput() class, which produces self-documenting tab-delimited output
 	dout = util.DelimitedOutput()
 	dout.addHeader('generation','Generation (1-based)','d')
 	dout.addHeader('average.fitness','Average fitness of population','f')
@@ -84,16 +91,15 @@ if __name__=='__main__':
 	n_written = 0
 
 	generations_per_output = options.output_frequency
-	total_iterations = int(options.num_generations/float(generations_per_output))
+	# Total number of reporting iterations to run
+	# The +1 is because the first iteration will write out the generation-zero starting values
+	total_iterations = int(options.num_generations/float(generations_per_output))+1
 
 	# Write out starting time
 	data_outs.write("# Evolution finished {}\n".format(util.timestamp()))
 
 	for n in range(total_iterations):
-		# Evolve the population by 
-		pop.evolve(generations_per_output)
-
-		# A dictionary of results, one result per addHeader call above
+		# Create a dictionary of results
 		result = dout.createResult(default=None)
 		result['generation'] = pop.generations
 		result['average.fitness'] = pop.averageFitness()
@@ -103,6 +109,8 @@ if __name__=='__main__':
 		line = dout.formatLine(result)
 		data_outs.write(line)
 		n_written += 1
+		# Evolve the population
+		pop.evolve(generations_per_output)
 	tstop = time.time()
 
 	# Write out stopping time
