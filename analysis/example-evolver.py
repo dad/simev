@@ -27,7 +27,7 @@ if __name__=='__main__':
 	parser.add_argument(dest="population_size", type=int, help="size of evolving population")
 	parser.add_argument(dest="num_generations", type=int, help="number of generations to simulate")
 	# Optional arguments
-	#parser.add_argument("--randomize", dest="randomize", action="store_true", default=False, help="randomize each sequence?")
+	parser.add_argument("--output-frequency", dest="output_frequency", type=int, default=1, help="frequency of output, in generations")
 	parser.add_argument("-o", "--out", dest="out_fname", default=None, help="output filename")
 	options = parser.parse_args()
 
@@ -89,22 +89,24 @@ if __name__=='__main__':
 	dout.writeHeader(data_outs)
 	n_written = 0
 
+	generations_per_output = options.output_frequency
+	total_iterations = int(options.num_generations/float(generations_per_output))
 
 	# Write out starting time
 	data_outs.write("# Evolution finished {}\n".format(util.timestamp()))
 
-	for n in range(options.num_generations):
+	for n in range(total_iterations):
+		# Evolve the population by 
+		pop.evolve(generations_per_output)
+
 		# A dictionary of results, one result per addHeader call above
 		result = dout.createResult(default=None)
-		pop.evolve(1)
-		result['generation'] = n+1
+		result['generation'] = pop.generations
 		result['average.fitness'] = pop.averageFitness()
 		lca_entry = pop.lastCommonAncestor()
 		result['lca'] = lca_entry.organism.sequence
 		# Parse the values, convert Nones to NA, etc.
 		line = dout.formatLine(result)
-		# A more manual approach:
-		# line = format.format(column1="the answer is", column2=42)
 		data_outs.write(line)
 		n_written += 1
 	tstop = time.time()

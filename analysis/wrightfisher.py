@@ -1,4 +1,4 @@
-import math, string, random, collections
+import math, string, collections
 import scipy as sp
 from numpy.random import binomial
 
@@ -69,9 +69,9 @@ class NaiveMutator(Mutator):
 		mut_sequence = [x for x in sequence]
 		mutations = []
 		for l in range(len(mut_sequence)):
-			if random.random() < self.per_site_mutation_rate:
+			if sp.random.random() < self.per_site_mutation_rate:
 				from_base = mut_sequence[l]
-				mut_sequence[l] = random.choice(self.mut_choices[mut_sequence[l]])
+				mut_sequence[l] = sp.random.choice(self.mut_choices[mut_sequence[l]])
 				mutations.append(MutationInfo(l, from_base, mut_sequence[l]))
 		return ''.join(mut_sequence), mutations
 
@@ -80,7 +80,7 @@ class SimpleMutator(Mutator):
 	def __init__(self, per_site_mutation_rate, alphabet = 'ATGC'):
 		self.per_site_mutation_rate = per_site_mutation_rate
 		self.alphabet = alphabet
-		self.mut_choices = dict([(x,alphabet.replace(x,'')) for x in alphabet])
+		self.mut_choices = dict([(x,[a for a in alphabet.replace(x,'')]) for x in alphabet])
 
 	def mutate(self, sequence):
 		"""Mutate the sequence with the specified per-site mutation rate."""
@@ -89,9 +89,9 @@ class SimpleMutator(Mutator):
 		res = sequence
 		if n_mutations > 0:
 			mut_sequence = [x for x in sequence]
-			for l in random.sample(range(len(sequence)),n_mutations):
+			for l in sp.random.choice(range(len(sequence)),n_mutations):
 				from_base = mut_sequence[l]
-				mut_sequence[l] = random.choice(self.mut_choices[mut_sequence[l]])
+				mut_sequence[l] = sp.random.choice(self.mut_choices[mut_sequence[l]])
 				mutations.append(MutationInfo(l, from_base, mut_sequence[l]))
 			res = ''.join(mut_sequence)
 		return res, mutations
@@ -278,7 +278,7 @@ class SampleCounter(collections.Counter):
 		"""Choose an element with probability equal to k/n, where k is the element count and n = sum(k)"""
 		n = sum(self.values())
 		ordered = self.most_common()
-		r = random.randint(0,n-1)
+		r = sp.random.randint(0,n)
 		i = 0
 		k = ordered[0][1]
 		while r>k:
@@ -406,7 +406,7 @@ class WrightFisherPopulation(Population):
 			# function which could decide how many unmutated sequences there were.
 			for nm in range(self.population_size):
 				# Pick parent according to fitness: Wright-Fisher sampling
-				parent_entry = sorted_entries[pickIndexByProbability(cum_probs, random.random())][1]
+				parent_entry = sorted_entries[pickIndexByProbability(cum_probs, sp.random.random())][1]
 				# Reproduce with mutation; add to genebank
 				spawn_entry = self.createOffspring(parent_entry)
 				# Insert offspring into new generation
