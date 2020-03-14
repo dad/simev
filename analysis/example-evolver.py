@@ -1,6 +1,6 @@
 #! python
 
-import sys, os, math, random, argparse, itertools
+import sys, os, math, random, argparse, itertools, time
 import scipy as sp
 import util
 import wrightfisher as wf
@@ -43,6 +43,11 @@ if __name__=='__main__':
 		(headers, seqs) = biofile.readFASTA(inf)
 	'''
 
+	def randomSequence(n, alphabet):
+		indices = range(len(alphabet))
+		return ''.join([alphabet[i] for i in sp.random.choice(indices, size=n, replace=True)])
+
+
 	# Set up parameters of the evolving population
 	alphabet = 'ACDEFGHIKLMNPQRSTVWY'
 	mutation_rate = 0.0001
@@ -50,7 +55,7 @@ if __name__=='__main__':
 	sp.random.seed(3)
 	seq = wf.EvolvableSequence(randomSequence(100,alphabet), base_fitness)
 	tstart = time.time()
-	mutator = wf.SimpleMutator(mu,alphabet)
+	mutator = wf.SimpleMutator(mutation_rate,alphabet)
 	fitness_evaluator = wf.SequenceFitnessEvaluator()
 
 	# Create the population
@@ -59,7 +64,8 @@ if __name__=='__main__':
 
 	# Write output
 	dout = util.DelimitedOutput()
-	dout.addHeader('from.amino.acid','Starting amino acid one-letter code','s')
+	dout.addHeader('generation','Generation (1-based)','d')
+	dout.addHeader('average.fitness','Average fitness of population','f')
 	# Write the header descriptions
 	dout.describeHeader(data_outs)
 	# Write the header fields
@@ -83,10 +89,10 @@ if __name__=='__main__':
 		# line = format.format(column1="the answer is", column2=42)
 		data_outs.write(line)
 		n_written += 1
-
+	tstop = time.time()
 
 	# Write out stopping time
-	data_outs.write("# Evolution finished {stamp} ({elapsed:f} elapsed time)\n".format(stamp=util.timestamp(), elapsed=tstop-tstart))
+	data_outs.write("# Evolution finished {stamp} ({elapsed:f} seconds elapsed)\n".format(stamp=util.timestamp(), elapsed=tstop-tstart))
 
 	# Shut down output
 	if not options.out_fname is None:

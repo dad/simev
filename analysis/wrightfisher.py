@@ -1,5 +1,14 @@
 import math, string, random, collections
+import scipy as sp
 from numpy.random import binomial
+
+"""
+Goals and design
+
+
+
+
+"""
 
 class NotImplementedException(Exception):
 	def __init__(self):
@@ -23,7 +32,8 @@ class SpawnResult:
 		return len(self.mutations)
 
 class Evolvable:
-	"""An interface for a class that can reproduce with mutation and has a fitness function.""" 
+	"""An interface for a class that can reproduce with mutation and has a fitness function."""
+	@property
 	def fitness(self):
 		"""Provides a measure of reproductive fitness."""
 		raise NotImplementedException("Must override")
