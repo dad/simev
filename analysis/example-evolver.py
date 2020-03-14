@@ -5,6 +5,22 @@ import scipy as sp
 import util
 import wrightfisher as wf
 
+
+class MySequenceFitnessEvaluator(wf.SequenceFitnessEvaluator):
+	def __init__(self):
+		pass
+
+	"""Interface for fitness evaluation."""
+	def fitness(self, organism, population):
+		seq = organism.sequence # Relies on 
+		# Fitness is the fraction of E and K plus some constant small factor
+		# so that sequences without E and K don't simply go extinct
+		epsilon = 0.001
+		fit = (seq.count('E') + seq.count('K') + epsilon)/float(len(seq))
+		return fit
+
+
+
 if __name__=='__main__':
 	parser = argparse.ArgumentParser(description="Example use of Wright-Fisher evolution")
 	# Required arguments
@@ -53,10 +69,10 @@ if __name__=='__main__':
 	mutation_rate = 0.0001
 	base_fitness = 1.0
 	sp.random.seed(3)
-	seq = wf.EvolvableSequence(randomSequence(100,alphabet), base_fitness)
+	seq = wf.EvolvableSequence(randomSequence(50,alphabet), base_fitness)
 	tstart = time.time()
 	mutator = wf.SimpleMutator(mutation_rate,alphabet)
-	fitness_evaluator = wf.SequenceFitnessEvaluator()
+	fitness_evaluator = MySequenceFitnessEvaluator()
 
 	# Create the population
 	pop = wf.WrightFisherPopulation(options.population_size, mutator, fitness_evaluator)
@@ -66,6 +82,7 @@ if __name__=='__main__':
 	dout = util.DelimitedOutput()
 	dout.addHeader('generation','Generation (1-based)','d')
 	dout.addHeader('average.fitness','Average fitness of population','f')
+	dout.addHeader('lca','Last common ancestor of the population','s')
 	# Write the header descriptions
 	dout.describeHeader(data_outs)
 	# Write the header fields
@@ -82,7 +99,8 @@ if __name__=='__main__':
 		pop.evolve(1)
 		result['generation'] = n+1
 		result['average.fitness'] = pop.averageFitness()
-
+		lca_entry = pop.lastCommonAncestor()
+		result['lca'] = lca_entry.organism.sequence
 		# Parse the values, convert Nones to NA, etc.
 		line = dout.formatLine(result)
 		# A more manual approach:
