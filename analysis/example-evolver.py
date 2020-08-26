@@ -25,6 +25,30 @@ class MySequenceFitnessEvaluator(wf.SequenceFitnessEvaluator):
 		fit = (seq.count('E') + seq.count('K') + epsilon)/float(len(seq))
 		return fit
 
+class MyCachedSequenceFitnessEvaluator(wf.SequenceFitnessEvaluator):
+
+	def createCache(self):
+		self._cache = {}
+
+	"""A simple example of how to create a custom fitness function for evolving organisms which have a sequence."""
+	def fitness(self, organism, population):
+		seq = organism.sequence # We can do this if we're using EvolvableSequences
+		# A simple definition of sequence fitness based on simple sequence properties.
+		# This fitness definition will lead to hill-climbing toward sequences consisting of all E and K.
+		# 
+		# Fitness is the fraction of E and K plus some constant small factor
+		# so that sequences without E and K don't simply go extinct
+
+		# Cache the fitness once we've computed it, and only recompute if necessary.
+		fit = None
+		try:
+			fit = self._cache[seq]
+		except KeyError:
+			epsilon = 0.001
+			fit = (seq.count('E') + seq.count('K') + epsilon)/float(len(seq))
+			self._cache[seq] = fit
+		return fit
+
 if __name__=='__main__':
 	parser = argparse.ArgumentParser(description="Example use of Wright-Fisher evolution")
 	# Required arguments
@@ -72,7 +96,8 @@ if __name__=='__main__':
 	# Start recording the time
 	tstart = time.time()
 	mutator = wf.SimpleMutator(mutation_rate,alphabet)
-	fitness_evaluator = MySequenceFitnessEvaluator()
+	fitness_evaluator = MyCachedSequenceFitnessEvaluator()
+	fitness_evaluator.createCache()
 
 	# Create the population
 	pop = wf.WrightFisherPopulation(options.population_size, mutator, fitness_evaluator)
